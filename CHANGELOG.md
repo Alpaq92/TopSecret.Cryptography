@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.2](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v2.1.1...v2.1.2) (2026-07-04)
+
+
+### Documentation
+
+* recolor icon to Open Color gray.4 -&gt; gray.5 ([#22](https://github.com/Alpaq92/TopSecret.Cryptography/issues/22)) ([8b316a6](https://github.com/Alpaq92/TopSecret.Cryptography/commit/8b316a68d3a1bead9df2fda0e7963eaba824934f))
+
 ## [2.1.1](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v2.1.0...v2.1.1) (2026-07-04)
 
 
