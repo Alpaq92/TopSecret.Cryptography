@@ -158,8 +158,25 @@ namespace TopSecret.Cryptography
             var result = new byte[_tagLine];
             var tmp = MemoryMarshal.Cast<ulong, byte>(lanes[0][1].Span).Slice(0,result.Length);
             tmp.CopyTo(result);
+
+            foreach (var lane in lanes)
+            {
+                lane.Wipe();
+            }
+
+            AfterWipeForTesting?.Invoke(lanes);
+
             return result;
         }
+
+        /// <summary>
+        /// Test-only hook, invoked with the (now-wiped) lanes immediately
+        /// after Finalize() zeroes them — lets a test verify the wipe
+        /// actually reached the real buffers a genuine Hash() call used,
+        /// not just Argon2Lane.Wipe() exercised in isolation. Always null
+        /// in production.
+        /// </summary>
+        internal Action<Argon2Lane[]> AfterWipeForTesting;
 
         internal unsafe static void Compress(Span<ulong> dest, Span<ulong> refb, Span<ulong> prev)
         {

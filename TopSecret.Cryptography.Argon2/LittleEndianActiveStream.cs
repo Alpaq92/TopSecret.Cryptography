@@ -184,7 +184,16 @@ namespace TopSecret.Cryptography
             }
             else if (_buffer.Length < size)
             {
-                Array.Resize(ref _buffer, size);
+                // Every caller immediately overwrites the full reserved range
+                // after this returns, so there's nothing to preserve across a
+                // resize — but the buffer being replaced may still hold
+                // sensitive bytes from an earlier Expose() call in this same
+                // stream's lifetime (e.g. Initialize() reuses one stream
+                // across password, salt, secret, and associated data in
+                // turn). Array.Resize would abandon that old buffer as-is;
+                // wipe it first instead of copying content nothing needs.
+                Array.Clear(_buffer, 0, _buffer.Length);
+                _buffer = new byte[size];
             }
 
             _bufferOffset = 0;

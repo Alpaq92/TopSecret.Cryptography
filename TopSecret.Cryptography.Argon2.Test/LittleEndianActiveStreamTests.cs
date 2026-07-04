@@ -1,6 +1,7 @@
 namespace TopSecret.Cryptography.Test
 {
     using System.Linq;
+    using System.Reflection;
     using Xunit;
 
     public class LittleEndianActiveStreamTests
@@ -57,6 +58,34 @@ namespace TopSecret.Cryptography.Test
 
             Assert.Equal(5, stream.Read(buffer, 0, 5));
             Assert.Equal(new byte[] { 0xac, 0x4c, 0xf0, 0x00, 0x0b }, buffer);
+        }
+
+        /// <summary>
+        /// ReserveBuffer used to grow _buffer via Array.Resize, which
+        /// abandons the old (smaller) buffer without clearing it — if it held
+        /// sensitive bytes from an earlier Expose() call (e.g. Initialize()
+        /// reuses one stream across password, salt, secret, and associated
+        /// data in turn), they'd sit unwiped in that discarded array. This
+        /// grabs the buffer reference via reflection specifically to check
+        /// the abandoned array itself, not just the stream's current state.
+        /// </summary>
+        [Fact]
+        public void ResizingReservedBufferWipesTheAbandonedBuffer()
+        {
+            var stream = new LittleEndianActiveStream();
+            var bufferField = typeof(LittleEndianActiveStream).GetField("_buffer", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            stream.Expose(new byte[] { 0xAA, 0xBB, 0xCC, 0xDD });
+            Assert.Equal(4, stream.Read(new byte[4], 0, 4));
+
+            var firstBuffer = (byte[])bufferField.GetValue(stream);
+            Assert.Contains(firstBuffer, b => b != 0);
+
+            // Exposing something bigger forces ReserveBuffer to grow _buffer.
+            stream.Expose(new byte[] { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 });
+            Assert.Equal(8, stream.Read(new byte[8], 0, 8));
+
+            Assert.All(firstBuffer, b => Assert.Equal(0, b));
         }
     }
 }
