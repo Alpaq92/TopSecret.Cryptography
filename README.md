@@ -33,7 +33,13 @@ contributors — see [LICENSE](LICENSE).
 | `TopSecret.Cryptography.Argon2` | Argon2i / Argon2d / Argon2id, implemented as a `System.Security.Cryptography.DeriveBytes`. |
 | `TopSecret.Cryptography.Blake2` | Blake2b per RFC 7693, implemented as a `System.Security.Cryptography.HMAC`. |
 
-Both multi-target `netstandard2.0;net462;net6.0;net8.0;net10.0`.
+Both multi-target `netstandard2.0;net462;net6.0;net8.0;net10.0`. Despite the
+shared repo, they're independent at build and package level: `Argon2` vendors
+its own private, internal copy of Blake2b-512 HMAC hashing (it only ever
+computes RFC 7693 Blake2b — the underlying digest, not the KDF's public
+surface) rather than referencing the `Blake2` package, so installing
+`TopSecret.Cryptography.Argon2` alone doesn't pull in `TopSecret.Cryptography.Blake2`
+as a transitive dependency.
 
 ## What differs from upstream
 
@@ -63,13 +69,38 @@ non-controversial for a small crypto library):
   calls `GetAwaiter().GetResult()` on the same async implementation
   `GetBytesAsync` uses, instead of `Task.Run(async () => ...).Result`. This
   removes an unnecessary thread-pool hop and surfaces the original exception
-  instead of an `AggregateException` wrapper. It does **not** fix the
-  underlying single-threaded-runtime limitation — see
-  [Browser / WebAssembly](#browser--webassembly) below. (Ports
+  instead of an `AggregateException` wrapper. On its own this didn't fix the
+  underlying single-threaded-runtime limitation — see the lane-dispatch fix
+  below and [Browser / WebAssembly](#browser--webassembly) for what actually
+  closes it. (Ports
   [upstream PR #47](https://github.com/kmaragon/Konscious.Security.Cryptography/pull/47),
   closed upstream without being merged; addresses
   [issue #46](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/46)
   and the historical [issue #22](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/22).)
+- **`Hash()`/`InitializeLanes()` no longer dispatch every lane through the
+  thread pool — lane 0 always runs inline on the calling thread; only lanes
+  `1..N-1` (if any) go through `Task.Run`.** At `DegreeOfParallelism = 1` (the
+  only value this fork's WASM use case needs) that means zero lanes ever touch
+  `Task.Run`, so `GetBytes`/`GetBytesAsync` complete on a single OS thread —
+  this is the actual fix for [Browser / WebAssembly](#browser--webassembly)
+  below, verified by an executable WASM smoke test
+  (`TopSecret.Cryptography.Argon2.WasmSmokeTest`) that runs in CI under
+  Node's V8 with `Environment.ProcessorCount == 1`, not just by inspection.
+  At `DegreeOfParallelism > 1` on a real multi-core host this is also
+  strictly better than before: the calling thread does useful work instead of
+  idling on the old blocking wait, so only `N-1` pool threads are needed
+  instead of `N`. Cross-lane reads never address the slice currently being
+  written (`IndexAlpha`'s reference-area sizing excludes it for both same-lane
+  and cross-lane cases), so this reordering cannot change the output — proven
+  by the RFC 9106 official test vector and 6 vectors cross-checked against the
+  independent `argon2-cffi`/`phc-winner-argon2` reference implementation
+  (`Argon2ExternalKatTests.cs`), all passing byte-for-byte both before and
+  after. `DegreeOfParallelism > 1` on a detected single-threaded host
+  (`OperatingSystem.IsBrowser()` or `Environment.ProcessorCount == 1`) now
+  fails fast with a clear `PlatformNotSupportedException` instead of the
+  runtime's own opaque "Cannot wait on monitors on this runtime" surfacing
+  from deep inside `Task` internals — reproduced against the pre-fix code as
+  a control before implementing the guard.
 - **`LittleEndianActiveStream.ClearBuffer()` null-checks its buffer** before
   clearing it, instead of assuming a prior `Expose(...)` call always
   allocated one. Not reachable through today's call sites, but a real latent
@@ -147,49 +178,82 @@ issues, only the four items above were actually adopted. Everything else:
 
 ## Browser / WebAssembly
 
-The **synchronous** `Argon2.GetBytes(int)` **cannot complete on a
-single-threaded runtime** (browser WASM being the practical case) — sync or
-async internally, it still blocks the calling thread waiting on work that
-needs that same thread to run. This is inherited from Konscious's internal
-implementation ([issue #22](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/22)),
-not something this fork introduces or can safely paper over. Verified
-empirically in a Blazor WebAssembly app (`net10.0-browser`,
-`Environment.ProcessorCount == 1`):
+**As of this fork, `Argon2.GetBytes(int)` completes on a single-threaded
+runtime (browser WASM being the practical case) at `DegreeOfParallelism = 1`
+— the only value that ever made sense there anyway, since WASM has no second
+thread for extra lanes to run on regardless.** That wasn't always true.
+Originally, `Hash()`/`InitializeLanes()` dispatched *every* lane's work
+through `Task.Run(...)`/`Task.WhenAll(...)`, including the one and only lane
+at `DegreeOfParallelism = 1` — so the synchronous `GetBytes`'s
+`GetAwaiter().GetResult()` blocked the calling thread waiting on work that
+needed that very thread to run, and a single-threaded runtime has no second
+thread to give it. This is inherited from Konscious's internal implementation
+([issue #22](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/22)),
+not something this fork introduced.
 
-- `GetBytesAsyncImpl` schedules every lane's work via `Task.Run(...)` /
-  `Task.WhenAll(...)`, regardless of `DegreeOfParallelism`.
-- A single-threaded runtime has no second thread for that scheduled work to
-  run on, so anything that blocks waiting for it fails. In practice this
-  isn't a silent hang: `GetBytes`'s `GetAwaiter().GetResult()` throws
-  `PlatformNotSupportedException: Cannot wait on monitors on this runtime`
-  immediately — Mono's WASM runtime refuses the blocking wait outright
-  rather than deadlocking the page.
-- `GetBytesAsync`, by contrast, **does** run to completion on a
-  single-threaded runtime — confirmed at both `DegreeOfParallelism = 1` and
-  `= 2` — because awaiting it (all the way up the call stack, with no
-  synchronous blocking anywhere) lets the runtime's single thread return to
-  the event loop and actually execute the queued work. Output matched the
-  identical call on desktop byte-for-byte.
+The fix: lane 0 now always runs inline on the calling thread; only lanes
+`1..N-1` (if any) go through `Task.Run`. At `DegreeOfParallelism = 1` there
+are zero "remaining" lanes, so neither `Hash()` nor `InitializeLanes()` ever
+touches the thread pool, and both `GetBytes` and `GetBytesAsync` complete on
+a single OS thread. This was verified by actually running the fixed code —
+not just inspecting it — for the reason `TopSecret.ProtectedString`'s own
+adversarial review of this exact question insisted on: source-level
+inspection of async/threading code has repeatedly proven unreliable as a
+substitute for execution.
 
-That's where this fork's job ends: confirming the underlying async call
-genuinely completes correctly on WASM. **It is not a general endorsement of
-"expose an async Argon2id API to browser callers."** Whether that's actually
-safe depends entirely on what wraps the call, and for a security-critical
-credential type it usually isn't. A bare, stateless call —
-`new Argon2id(pw){...}; var h = await argon.GetBytesAsync(n);` — has nothing
-to regress. But a type that holds a lock across the whole hash operation (to
-protect pinned/locked plaintext scratch buffers, to guarantee `Dispose`
-returned ⇒ no library-held plaintext remains, or to serialize verify/mutate
-so a rotation can't race a stale check) cannot naively await mid-hash without
-releasing that lock — and releasing it changes the type's actual security
-properties, not just its threading model.
+- `TopSecret.Cryptography.Argon2.WasmSmokeTest` is a `browser-wasm` console
+  app, run in CI under Node's V8 (`OperatingSystem.IsBrowser() == true`,
+  `Environment.ProcessorCount == 1` — a genuinely single-threaded host, the
+  same class of environment as an actual browser tab), not merely compiled.
+  It calls the real `Argon2id.GetBytes`/`GetBytesAsync` at
+  `DegreeOfParallelism = 1` and asserts the output against an
+  externally-verified vector.
+- A control run of the *same* smoke test against the pre-fix code, on the
+  same host, reproduced the exact original failure —
+  `PlatformNotSupportedException: Cannot wait on monitors on this runtime`,
+  thrown from `GetBytes`'s blocking wait — confirming the smoke test actually
+  catches the bug rather than passing vacuously.
+- `GetBytesAsync` at `DegreeOfParallelism = 1` and `= 2` already ran to
+  completion on a single-threaded runtime even before this fix (awaiting it
+  all the way up the call stack, with no synchronous blocking anywhere, lets
+  the runtime's single thread return to the event loop and execute the queued
+  work) — this fix doesn't change that path, only extends the same guarantee
+  to the synchronous one at `DegreeOfParallelism = 1`.
+- `DegreeOfParallelism > 1` is still unusable on a single-threaded host —
+  there's genuinely no second thread for the extra lanes — but it now fails
+  immediately with a clear `PlatformNotSupportedException` naming the actual
+  problem (`OperatingSystem.IsBrowser()` or `Environment.ProcessorCount == 1`
+  detected), instead of surfacing as the runtime's own opaque error deep
+  inside `Task` internals.
+
+Practically, this means a caller that only ever needs
+`DegreeOfParallelism = 1` — which is every caller this fork was built for —
+can call the plain synchronous `GetBytes` on browser WASM exactly as it would
+on any other platform: no `await`, no rewritten call sites, and critically,
+no need to release a lock across an asynchronous boundary to make it work.
+That last point matters because it sidesteps, rather than reopens, the
+specific security tradeoff `TopSecret.ProtectedString` rejected below — that
+rejection was about an *async* wrapper needing to release an instance lock
+across the KDF `await`; a synchronous, non-yielding call has no such boundary
+to release across.
+
+This fork's job stops at proving the underlying calls genuinely complete
+correctly on WASM. **It is not a general endorsement of "expose an Argon2id
+API to browser callers" for every design.** Whether that's actually safe
+still depends on what wraps the call. A bare, stateless call —
+`new Argon2id(pw){...}; var h = argon.GetBytes(n);` (or `await
+GetBytesAsync(n)`) — has nothing to regress. But a type that holds a lock
+across the whole hash operation for reasons unrelated to the KDF call itself
+(serializing verify/mutate so a rotation can't race a stale check, say) still
+needs its own analysis — this fork changes what's *possible*, not what's
+automatically *safe* for every caller's design.
 
 This is exactly the evaluation [TopSecret.ProtectedString](https://github.com/Alpaq92/TopSecret.ProtectedString)
 did for its own `ComputeArgon2idHash`, and why it does **not** expose an async
-credential-hashing API on browser despite this fork proving the raw call
-works there. Quoting its README's `browser-wasm` section directly, because
-it's the authoritative account and shouldn't be paraphrased into something
-weaker:
+credential-hashing API on browser despite this fork having already proven the
+raw async call works there. Quoting its README's `browser-wasm` section
+directly, because it's the authoritative account and shouldn't be
+paraphrased into something weaker:
 
 > Argon2id is not supported in the browser — deliberately. Konscious (the
 > managed Argon2 underneath) has no truly synchronous path: its sync
@@ -214,13 +278,28 @@ weaker:
 > libsodium, no browser-wasm RID). Revisit if .NET's multithreaded WASM lands
 > or a permissively-licensed, browser-safe managed Argon2 appears.
 
+The quoted analysis was written against an earlier version of this fork,
+before the `Task.Run` elimination described above — at the time, the *only*
+way to get a completing call on WASM was the async one, which is why the
+rejected alternative was specifically "an awaited async wrapper." That
+premise has since changed: the plain synchronous `GetBytes` now also
+completes at `DegreeOfParallelism = 1`, with no `await` and nothing to
+release a lock around. Whether that changes `TopSecret.ProtectedString`'s own
+conclusion is that project's call to make, not this one's — the
+`mlock`/`RLIMIT_MEMLOCK`/stale-credential concerns quoted above were about an
+async wrapper specifically, and don't obviously apply to a call that never
+yields, but that repo's own adversarial review process, not an inference
+drawn here, is what should actually decide it.
+
 If you're building something other than a security-critical, lock-holding
-wrapper — a one-shot hash with no shared mutable state to protect —
-`await GetBytesAsync(...)` on WASM is exactly as safe as it is anywhere else,
-and this fork's verification stands. Don't call `GetBytes(...)` or block on
-`GetBytesAsync(...).Result`/`.GetAwaiter().GetResult()` there regardless; that
-part hasn't changed. The judgment call is entirely about what you build on
-top of it.
+wrapper — a one-shot hash with no shared mutable state to protect — both
+`GetBytes(...)` at `DegreeOfParallelism = 1` and `await GetBytesAsync(...)`
+at any `DegreeOfParallelism` this host can support work correctly on WASM,
+and this fork's verification stands. Still don't block on
+`GetBytesAsync(...).Result`/`.GetAwaiter().GetResult()` as a matter of async
+hygiene — prefer `GetBytes` (which does the same thing internally, correctly)
+over rolling your own blocking wait. The judgment call is entirely about what
+you build on top of it.
 
 **Blake2 doesn't have this problem.** `HMACBlake2B` contains no `Task`,
 `Task.Run`, or any async/threading code at all — confirmed by inspecting the
