@@ -1,20 +1,30 @@
 # TopSecret.Cryptography
 
+<div align="center">
+<a href="https://www.nuget.org/packages/TopSecret.Cryptography.Argon2"><img alt="NuGet: TopSecret.Cryptography.Argon2" src="https://img.shields.io/nuget/v/TopSecret.Cryptography.Argon2.svg?label=TopSecret.Cryptography.Argon2"></a>
+<a href="https://www.nuget.org/packages/TopSecret.Cryptography.Blake2"><img alt="NuGet: .Blake2" src="https://img.shields.io/nuget/v/TopSecret.Cryptography.Blake2.svg?label=.Blake2"></a>
+<a href="https://github.com/Alpaq92/TopSecret.Cryptography/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Alpaq92/TopSecret.Cryptography/ci.yml?branch=master&label=CI"></a>
+<a href="https://github.com/Alpaq92/TopSecret.Cryptography/actions/workflows/release.yml"><img alt="Release" src="https://img.shields.io/github/actions/workflow/status/Alpaq92/TopSecret.Cryptography/release.yml?branch=master&label=Release"></a>
+<a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
+</div>
+
+<br>
+
 Argon2 and Blake2 for .NET — a maintained fork of
 [Konscious.Security.Cryptography](https://github.com/kmaragon/Konscious.Security.Cryptography).
 
-This repository is a fork of [kmaragon/Konscious.Security.Cryptography](https://github.com/kmaragon/Konscious.Security.Cryptography),
-renamed to `TopSecret.Cryptography` and re-namespaced to match. The primary
-motivation was singular: **make Argon2 work on WASM** — nothing more, nothing
-less. That does *not* mean "expose an async Argon2id API for browser apps to
-call" — see [Browser / WebAssembly](#browser--webassembly) below for why that
-option was evaluated and rejected as a security downgrade at the consuming
-layer, despite the raw async call completing correctly on WASM. Beyond that,
-this fork tracks modern .NET target frameworks, carries a strong name, and
-folds in a handful of long-standing, low-risk fixes from upstream's open
-PR/issue backlog. All credit for the underlying Argon2 and Blake2
-implementations belongs to [Keef Aragon](https://github.com/kmaragon) and
-Konscious's contributors — see [LICENSE](LICENSE).
+This is a fork of [kmaragon/Konscious.Security.Cryptography](https://github.com/kmaragon/Konscious.Security.Cryptography),
+renamed and re-namespaced to `TopSecret.Cryptography`. The motivation was
+singular: **make Argon2 work on WASM** — nothing more, nothing less. That
+does *not* mean "expose an async Argon2id API for browser apps to call" —
+see [Browser / WebAssembly](#browser--webassembly) below for why that option
+was evaluated and rejected as a security downgrade at the consuming layer,
+despite the raw async call completing correctly on WASM. Beyond that, this
+fork tracks modern .NET target frameworks, carries a strong name, and folds
+in a handful of long-standing, low-risk fixes from upstream's open PR/issue
+backlog. All credit for the underlying Argon2 and Blake2 implementations
+belongs to [Keef Aragon](https://github.com/kmaragon) and Konscious's
+contributors — see [LICENSE](LICENSE).
 
 ## Packages
 
