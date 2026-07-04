@@ -162,16 +162,19 @@ jobs:
           fi
 
       # --skip-duplicate makes re-runs safe after a partial push; .snupkg
-      # symbol packages are auto-detected and uploaded alongside. shell: bash
-      # is required here — PowerShell (the default shell on windows-latest)
-      # doesn't glob-expand a quoted "*.nupkg" pattern the way bash does, and
-      # dotnet nuget push then reports "File does not exist" for the literal
-      # unexpanded string (verified live: this exact failure happened before
-      # this fix, while the equivalent bash-shelled glob in the step above
-      # worked correctly).
+      # symbol packages are auto-detected and uploaded alongside. The glob
+      # must be UNQUOTED so the shell expands it into separate file
+      # arguments before dotnet ever sees them — a quoted glob (verified
+      # live, twice: same failure under both pwsh and bash) is passed to
+      # `dotnet nuget push` as one literal string containing an asterisk,
+      # which it does not internally expand, so it reports "File does not
+      # exist" for that literal name. shell: bash makes the unquoted
+      # expansion deterministic across the matrix (same pattern as the
+      # working "Attach packages to the GitHub Release" step below, which
+      # already uses an unquoted glob successfully).
       - name: Push to NuGet.org
         shell: bash
-        run: dotnet nuget push "./nupkg/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
 
       - name: Attach packages to the GitHub Release
         shell: bash
