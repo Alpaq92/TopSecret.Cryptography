@@ -2,6 +2,7 @@
 
 <div align="center">
 <a href="https://www.nuget.org/packages/TopSecret.Cryptography.Argon2"><img alt="NuGet: TopSecret.Cryptography.Argon2" src="https://img.shields.io/nuget/v/TopSecret.Cryptography.Argon2.svg?label=TopSecret.Cryptography.Argon2"></a>
+<a href="https://www.nuget.org/packages/TopSecret.Cryptography.Argon2"><img alt="NuGet downloads" src="https://img.shields.io/nuget/dt/TopSecret.Cryptography.Argon2.svg?label=Downloads&color=blue"></a>
 <a href="https://www.nuget.org/packages/TopSecret.Cryptography.Blake2"><img alt="NuGet: .Blake2" src="https://img.shields.io/nuget/v/TopSecret.Cryptography.Blake2.svg?label=.Blake2"></a>
 <a href="https://www.nuget.org/packages/TopSecret.Cryptography.ArgonBenchmarks"><img alt="NuGet: .ArgonBenchmarks" src="https://img.shields.io/nuget/v/TopSecret.Cryptography.ArgonBenchmarks.svg?label=.ArgonBenchmarks"></a>
 <a href="https://www.nuget.org/packages/TopSecret.Cryptography.ComparisonHarness"><img alt="NuGet: .ComparisonHarness" src="https://img.shields.io/nuget/v/TopSecret.Cryptography.ComparisonHarness.svg?label=.ComparisonHarness"></a>
