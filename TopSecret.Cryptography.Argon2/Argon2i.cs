@@ -1,4 +1,4 @@
-namespace Konscious.Security.Cryptography
+namespace TopSecret.Cryptography
 {
     /// <summary>
     /// An implementation of Argon2 https://github.com/P-H-C/phc-winner-argon2

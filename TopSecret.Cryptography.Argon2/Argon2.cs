@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Konscious.Security.Cryptography
+namespace TopSecret.Cryptography
 {
     using System;
     using System.Threading.Tasks;
@@ -34,11 +34,15 @@ namespace Konscious.Security.Cryptography
         /// <summary>
         /// Implementation of GetBytes
         /// </summary>
+        /// <remarks>
+        /// Blocks until the hash completes, so it cannot finish on
+        /// single-threaded runtimes such as browser WASM — use
+        /// <see cref="GetBytesAsync"/> there. See the README's
+        /// "Browser / WebAssembly" section for the full story.
+        /// </remarks>
         public override byte[] GetBytes(int bc)
         {
-            ValidateParameters(bc);
-            var task = Task.Run(async () => await GetBytesAsyncImpl(bc).ConfigureAwait(false) );
-            return task.Result;
+            return GetBytesAsync(bc).GetAwaiter().GetResult();
         }
 
 
@@ -85,6 +89,9 @@ namespace Konscious.Security.Cryptography
 
         private void ValidateParameters(int bc)
         {
+            if (bc < 1)
+                throw new ArgumentOutOfRangeException(nameof(bc), "Argon2 must generate at least 1 byte");
+
             if (bc > 1024)
                 throw new NotSupportedException("Current implementation of Argon2 only supports generating up to 1024 bytes");
 

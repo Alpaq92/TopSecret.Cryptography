@@ -1,0 +1,67 @@
+# CodeRabbit configuration — https://docs.coderabbit.ai/reference/configuration
+# The CodeRabbit GitHub App must be installed on this repository
+# (https://github.com/apps/coderabbitai) for reviews to run; this file only
+# configures its behavior once installed. Its PR approvals count toward the
+# ruleset's required-approval gate, satisfying "admin, maintainer, or
+# CodeRabbit" for auto-merge-approved.yml's soak-timer start.
+
+language: "en-US"
+
+reviews:
+  profile: "assertive"
+  # Non-blocking: CodeRabbit posts comments/suggestions but does NOT submit
+  # CHANGES_REQUESTED reviews, which would wedge the required-approval gate on
+  # every nitpick. The gate is satisfied by an admin/maintainer's (or
+  # CodeRabbit's) APPROVE; CodeRabbit advises rather than blocks.
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  auto_review:
+    enabled: true                  # review every PR automatically
+    drafts: false
+  path_instructions:
+    - path: "TopSecret.Cryptography.Argon2/**/*.cs"
+      instructions: |
+        Security-critical KDF code. Verify: no change alters the byte output
+        of GetBytes/GetBytesAsync for identical inputs (Argon2 is a spec
+        implementation — any output drift is a correctness regression, not
+        a style choice); the sync GetBytes path stays a thin bridge to
+        GetBytesAsync (no reintroduced Task.Run(...).Result-style
+        sync-over-async); ValidateParameters keeps rejecting bc < 1 and
+        bc > 1024; DegreeOfParallelism/MemorySize/Iterations validation
+        isn't loosened. Flag any change to LittleEndianActiveStream or
+        Argon2Core's lane-processing loop especially carefully — subtle
+        indexing bugs there produce wrong hashes silently, with no
+        exception to catch them.
+    - path: "TopSecret.Cryptography.Blake2/**/*.cs"
+      instructions: |
+        Security-critical hash code (RFC 7693). Verify: no change alters
+        digest output for identical inputs; HMACBlake2B's Key
+        get/set/Initialize semantics match System.Security.Cryptography.HMAC
+        conventions; no Task/async is introduced (Blake2b here is
+        intentionally synchronous end-to-end — that's why it has no
+        single-threaded-runtime WASM issue, see the README's Browser /
+        WebAssembly section — a change that adds Task.Run or similar would
+        reintroduce exactly the class of bug this fork fixed in Argon2).
+    - path: "**/*.Test/**/*.cs"
+      instructions: |
+        Known-answer/golden-vector tests (e.g. RFC test vectors, the
+        desktop-vs-WASM parity check) are the correctness contract for a hash
+        implementation — flag any change that weakens them (removed cases,
+        loosened Assert.Equal to a fuzzy comparison, [Fact] silently skipped).
+    - path: "**/*.csproj"
+      instructions: |
+        Check TargetFrameworks Condition strings match an actual entry in
+        that same file's TargetFrameworks list (this repo has shipped that
+        exact bug before — net46 vs net462, net4.6 vs net46). Check package
+        version bumps don't silently drop TFM support the project still
+        declares (verify against the package's own supported-frameworks
+        list, not just that restore succeeds locally).
+  path_filters:
+    - "!**/bin/**"
+    - "!**/obj/**"
+    - "!**/nupkg-local/**"
+
+chat:
+  auto_reply: true

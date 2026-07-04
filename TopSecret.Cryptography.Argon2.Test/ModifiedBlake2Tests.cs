@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Konscious.Security.Cryptography.Test
+namespace TopSecret.Cryptography.Test
 {
     using System;
     using Xunit;

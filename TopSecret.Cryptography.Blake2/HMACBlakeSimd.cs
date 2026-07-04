@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Konscious.Security.Cryptography
+namespace TopSecret.Cryptography
 {
     internal static class HMACBlakeSimd
     {

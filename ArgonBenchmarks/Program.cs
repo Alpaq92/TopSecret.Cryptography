@@ -1,4 +1,4 @@
-﻿using Konscious.Security.Cryptography;
+﻿using TopSecret.Cryptography;
 using System;
 using System.Text;
 using BenchmarkDotNet.Attributes;
@@ -23,7 +23,8 @@ namespace ArgonBenchmarks
 
     [MemoryDiagnoser]
     [SimpleJob(RuntimeMoniker.Net462)]
-    [SimpleJob(RuntimeMoniker.Net60)]
+    [SimpleJob(RuntimeMoniker.Net80)]
+    [SimpleJob(RuntimeMoniker.Net10_0)]
     [JsonExporterAttribute.BriefCompressed, CsvExporter(BenchmarkDotNet.Exporters.Csv.CsvSeparator.CurrentCulture)]
     public class ArgonBenchmarks
     {

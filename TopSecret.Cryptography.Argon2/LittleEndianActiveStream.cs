@@ -1,4 +1,4 @@
-namespace Konscious.Security.Cryptography
+namespace TopSecret.Cryptography
 {
     using System;
     using System.Collections.Generic;
@@ -64,12 +64,13 @@ namespace Konscious.Security.Cryptography
 
         public void ClearBuffer()
         {
-            for (int i = 0; i < _buffer.Length; ++i)
+            if (_buffer != null)
             {
-                _buffer[i] = 0;
+                Array.Clear(_buffer, 0, _buffer.Length);
             }
 
             _bufferAvailable = 0;
+            _bufferOffset = 0;
         }
 
         public override void Flush()

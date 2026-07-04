@@ -1,7 +1,7 @@
 using Blake2Core;
 using Xunit.Abstractions;
 
-namespace Konscious.Security.Cryptography.Test
+namespace TopSecret.Cryptography.Test
 {
     using System;
     using System.Text;

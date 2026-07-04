@@ -1,0 +1,35 @@
+version: 2
+updates:
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    # feat(deps): the feat type makes release-please cut a MINOR release for
+    # the monthly dependency refresh (auto-merged PR -> release PR -> publish
+    # to NuGet.org), and the deps scope renders as the bold **deps:** prefix
+    # in the changelog.
+    commit-message:
+      prefix: "feat"
+      include: "scope"
+    labels:
+      - "dependencies"
+    groups:
+      nuget-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    # Action-pin bumps are invisible to package consumers — fix-level, not a
+    # release trigger on their own (still ships if bundled with a feat/fix).
+    commit-message:
+      prefix: "fix"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"

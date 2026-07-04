@@ -1,4 +1,4 @@
-namespace Konscious.Security.Cryptography
+namespace TopSecret.Cryptography
 {
     internal class Blake2bNormal : Blake2bBase
     {

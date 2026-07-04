@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+# One CI run per ref at a time; a push flurry cancels superseded runs
+# instead of stacking them.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # windows-latest is the only runner that can build net462 (a plain
+        # .NET Framework TFM, no cross-compilation reference-assembly
+        # assumptions needed). ubuntu-latest gives cross-platform build
+        # confidence for the other four TFMs via CI_TFMS (see the csproj
+        # files) — no macOS-specific code exists in this library, so a
+        # third OS leg wouldn't add coverage, only runner cost.
+        include:
+          - os: windows-latest
+            tfms: ''
+          - os: ubuntu-latest
+            tfms: netstandard2.0;net6.0;net8.0;net10.0
+
+    env:
+      CI_TFMS: ${{ matrix.tfms }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore TopSecret.Cryptography.sln
+
+      - name: Build
+        run: dotnet build TopSecret.Cryptography.sln --configuration Release --no-restore
+
+      - name: Test (Argon2)
+        run: dotnet test TopSecret.Cryptography.Argon2.Test/TopSecret.Cryptography.Argon2.Test.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Test (Blake2)
+        run: dotnet test TopSecret.Cryptography.Blake2.Test/TopSecret.Cryptography.Blake2.Test.csproj --configuration Release --no-build --verbosity normal

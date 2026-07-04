@@ -1,0 +1,66 @@
+<Project>
+
+  <!--
+    Strong-name every project in the solution with PUBLIC SIGNING — no
+    private key exists anywhere, ever (kmaragon/Konscious.Security.Cryptography
+    issues #38/#55/#57 — repeated, non-controversial requests for a
+    strong-named assembly so .NET Framework consumers that themselves
+    require strong naming can reference this library). PublicSign embeds
+    the public key token without a cryptographic signature: nobody can
+    "steal" a private key that was never generated to a persisted file, at
+    the cost of the strong name being an identity marker rather than a
+    tamper-proof guarantee — which is what strong naming has always been on
+    .NET Core/5+ (the CLR does not verify strong-name signatures at load
+    time there). This is the same approach the .NET runtime/SDK's own repos
+    use for their public/OSS-signed builds. Signing every project here, not
+    just the two library projects, keeps InternalsVisibleTo friend assemblies
+    (the .Test projects, ArgonBenchmarks) on the same public key, which the
+    CLR requires once the granting assembly is strong-named.
+  -->
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+    <PublicSign>true</PublicSign>
+    <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)TopSecret.Cryptography.publickey</AssemblyOriginatorKeyFile>
+    <!-- Same public key as TopSecret.Cryptography.publickey, wrapped in the
+         SN_PUBLICKEYBLOB header <InternalsVisibleTo>'s Key= expects.
+         Regenerate both together (fresh RSACryptoServiceProvider keypair;
+         ExportCspBlob(false) for the .publickey file, and that blob prefixed
+         with the SigAlgId/HashAlgId/length header for this value) if the key
+         pair ever rotates — there being no private key to leak means there's
+         also no reason to rotate except a deliberate identity change.
+    -->
+    <FriendAssembliesPublicKey>0024000004800000140100000602000000A40000525341310008000001000100D1EE274B438FAD65A89AF2D537A9F88FD33C79C9D93299265529639755FF8FC213B1A2A692E0BE24EDEE1D085755CA3028CA23237C2DEDCC2422C2488A27931AA68ED00E5D860DBE6B69BFCC00C51EE8173AEAD106325DF693DEF03F077369A688234690FC04A1B3B85619FA7A50DFEFC34B9D0F8FB2FAD7937B01DBC77B1E980898FFDF9E2DA614654894088B2A6F93BFD08AA7E09F368C801E58CDC2C2B653A9F8EAEE11409192709339E03103717C5D30A7F545FC7A6EF789AE9503214AA415228B20553BDF26C3FF00DC502B34F13776A555A4EAAD8B31F03F5C591C1BF6C577DE00CDF89E601F9309B26A53A5906A09B67E682B1E9F50ED60E3F2782B94</FriendAssembliesPublicKey>
+    <!-- Fixed regardless of package version — strong-named .NET Framework
+         consumers bind on an exact AssemblyVersion match; letting it float
+         with VersionPrefix would break them on every patch release unless
+         they hand-maintain a bindingRedirect. Bump deliberately (and
+         document it) only for an intentional breaking change to the
+         strong-name identity itself. -->
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+  </PropertyGroup>
+
+  <!-- Fork identity, shared by every packable project so a future rebrand,
+       URL move, or copyright bump is a one-file edit. Per-project files keep
+       only what genuinely differs: PackageId, Description, versions, tags. -->
+  <PropertyGroup>
+    <Authors>Alpaq92;Keef Aragon</Authors>
+    <Company>Alpaq92</Company>
+    <Copyright>Copyright (c) 2017 Keef Aragon. Fork additions Copyright (c) 2026 Alpaq92.</Copyright>
+    <PackageProjectUrl>https://github.com/Alpaq92/TopSecret.Cryptography</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Alpaq92/TopSecret.Cryptography.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <!--
+    Release-time PackageReleaseNotes injection. release.yml writes the
+    release-please-generated changelog body to release_notes.txt at the repo
+    root before packing; every IsPackable=true project picks it up here so it
+    appears on each package's nuget.org landing page. Local builds without
+    release_notes.txt are unaffected.
+  -->
+  <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)release_notes.txt')">
+    <PackageReleaseNotes>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)release_notes.txt'))</PackageReleaseNotes>
+  </PropertyGroup>
+
+</Project>

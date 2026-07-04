@@ -1,4 +1,4 @@
-﻿namespace Konscious.Security.Cryptography
+﻿namespace TopSecret.Cryptography
 {
     /// <summary>
     /// The implementation of Argon2d for use in the crypto library

@@ -1,4 +1,4 @@
-namespace Konscious.Security.Cryptography
+namespace TopSecret.Cryptography
 {
     using System;
     using System.Numerics;
@@ -15,7 +15,7 @@ namespace Konscious.Security.Cryptography
         /// <param name="hashSize">the hash size in bits</param>
         public HMACBlake2B(int hashSize)
         {
-            HashName = "Konscious.Security.Cryptography.HMACBlake2B";
+            HashName = "TopSecret.Cryptography.HMACBlake2B";
 
             if ((hashSize % 8) > 0)
             {

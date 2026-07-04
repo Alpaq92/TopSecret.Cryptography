@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
-using Konscious.Security.Cryptography;
+using TopSecret.Cryptography;
 
 namespace ComparisonHarness
 {

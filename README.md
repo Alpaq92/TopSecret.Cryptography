@@ -1,126 +1,256 @@
-.NET Core Crypto Extensions [![build status](https://ci.appveyor.com/api/projects/status/rqgutdor95f2exav/branch/master?svg=true&branch=master "Appveyor Build Status")](https://ci.appveyor.com/project/kmaragon/konscious-security-cryptography/branch/master)
-===============
+# TopSecret.Cryptography
 
-# Konscious.Security.Cryptography.Blake2
+Argon2 and Blake2 for .NET — a maintained fork of
+[Konscious.Security.Cryptography](https://github.com/kmaragon/Konscious.Security.Cryptography).
 
-[NuGet package](https://www.nuget.org/packages/Konscious.Security.Cryptography.Blake2/)
+This repository is a fork of [kmaragon/Konscious.Security.Cryptography](https://github.com/kmaragon/Konscious.Security.Cryptography),
+renamed to `TopSecret.Cryptography` and re-namespaced to match. The primary
+motivation was making Argon2id password hashing actually work **in the
+browser** for [TopSecret.ProtectedString](https://github.com/Alpaq92/TopSecret.ProtectedString)'s
+Blazor WebAssembly demo — via `GetBytesAsync`, since the synchronous API
+can't complete on a single-threaded runtime (see
+[Browser / WebAssembly](#browser--webassembly) below). Beyond that, this fork
+tracks modern .NET target frameworks, carries a strong name, and folds in a
+handful of long-standing, low-risk fixes from upstream's open PR/issue
+backlog. All credit for the underlying Argon2 and Blake2 implementations
+belongs to [Keef Aragon](https://github.com/kmaragon) and Konscious's
+contributors — see [LICENSE](LICENSE).
 
-An implementation of Blake2 per RFC 7693 in C# and available for .NET core
+## Packages
 
-https://blake2.net/
+| Package | Description |
+|---|---|
+| `TopSecret.Cryptography.Argon2` | Argon2i / Argon2d / Argon2id, implemented as a `System.Security.Cryptography.DeriveBytes`. |
+| `TopSecret.Cryptography.Blake2` | Blake2b per RFC 7693, implemented as a `System.Security.Cryptography.HMAC`. |
 
-Usage follows standard types found in System.Security.Cryptography in corefx. Specifically HMAC algorithms.
+Both multi-target `netstandard2.0;net462;net6.0;net8.0;net10.0`.
+
+## What differs from upstream
+
+This isn't a cosmetic rename. The following changes were made against
+upstream `master`, chosen from a full triage of its open pull requests and
+issues (kept — deliberately — to changes that are low-risk and
+non-controversial for a small crypto library):
+
+- **Namespaces and package IDs** — `Konscious.Security.Cryptography` →
+  `TopSecret.Cryptography`, `Konscious.Security.Cryptography.Argon2` →
+  `TopSecret.Cryptography.Argon2`, etc. Public API shape (types, members,
+  parameters) is otherwise unchanged from upstream.
+- **`net10.0` target added**, `netstandard1.3`/`net4.6` replaced with
+  `netstandard2.0`/`net462`, and the test/benchmark projects' EOL `net5`/`net6.0`
+  targets replaced with `net8.0`/`net10.0`. The old `netstandard1.3` target
+  pulled in a transitively vulnerable `System.Net.Http`/`System.Text.RegularExpressions`
+  (advisory [GHSA-7jgj-8wvc-jh57](https://github.com/advisories/GHSA-7jgj-8wvc-jh57));
+  the modern targets don't need those packages at all. `net462` (not `net46`)
+  because the current `System.Memory`/`System.Numerics.Vectors` releases
+  dropped support for plain `net46` — and `ArgonBenchmarks`/`ComparisonHarness`
+  already targeted `net462`, so this also fixes a pre-existing inconsistency
+  between the libraries and their own tooling. (Partial credit:
+  [upstream PR #66](https://github.com/kmaragon/Konscious.Security.Cryptography/pull/66)
+  proposed the `net10.0` addition; only its `TargetFrameworks` edits were
+  ported, not its CI/branding changes.)
+- **`GetBytes(int)` no longer round-trips through the thread pool.** It now
+  calls `GetAwaiter().GetResult()` on the same async implementation
+  `GetBytesAsync` uses, instead of `Task.Run(async () => ...).Result`. This
+  removes an unnecessary thread-pool hop and surfaces the original exception
+  instead of an `AggregateException` wrapper. It does **not** fix the
+  underlying single-threaded-runtime limitation — see
+  [Browser / WebAssembly](#browser--webassembly) below. (Ports
+  [upstream PR #47](https://github.com/kmaragon/Konscious.Security.Cryptography/pull/47),
+  closed upstream without being merged; addresses
+  [issue #46](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/46)
+  and the historical [issue #22](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/22).)
+- **`LittleEndianActiveStream.ClearBuffer()` null-checks its buffer** before
+  clearing it, instead of assuming a prior `Expose(...)` call always
+  allocated one. Not reachable through today's call sites, but a real latent
+  `NullReferenceException` for any other caller. (From
+  [upstream PR #67](https://github.com/kmaragon/Konscious.Security.Cryptography/pull/67).)
+- **Both assemblies are strong-named**, resolving one of the most
+  frequently-repeated asks in upstream's issue tracker
+  ([#38](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/38),
+  [#55](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/55),
+  [#57](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/57)) —
+  never implemented upstream because it changes assembly identity for
+  existing unsigned consumers, but free to adopt in a fresh fork with none.
+  Signed via **`PublicSign`**, not a committed private key: `TopSecret.Cryptography.publickey`
+  holds only the public half, so there is no private key file anywhere to
+  ever leak — the same approach the .NET runtime/SDK's own repos use for
+  public/OSS-signed builds. This gives every assembly a stable, real
+  `PublicKeyToken` (the thing .NET Framework consumers actually bind on),
+  without a cryptographic signature backing it — which matches how strong
+  naming already works everywhere on .NET Core/5+: the CLR doesn't verify
+  strong-name signatures at load time there, only the identity is used.
+  `AssemblyVersion` is pinned at `1.0.0.0` in `Directory.Build.props`,
+  independent of the floating package version, so a routine patch release
+  can't silently break a strong-named .NET Framework consumer's binding.
+- **Every dependency audited and bumped to its latest stable release**
+  (checked directly against NuGet.org, not assumed): `Microsoft.NET.Test.Sdk`
+  17.11.1 → 18.7.0, `xunit` 2.9.2 → 2.9.3, `System.Memory` 4.5.4 → 4.6.3,
+  `System.Numerics.Vectors` 4.5.0 → 4.6.1, `BenchmarkDotNet` /
+  `BenchmarkDotNet.Diagnostics.Windows` 0.14.0 → 0.15.8 (0.15.x is the first
+  line with a `Net10_0` runtime moniker — confirmed by inspecting the shipped
+  assembly — so `ArgonBenchmarks` now actually benchmarks `net10.0` instead
+  of just compiling it). `xunit.runner.visualstudio` and `Blake2Core` were
+  already at their latest stable versions. This also dropped the 2018-era
+  `Microsoft.NET.Test.Sdk`/`xunit` versions that pulled in a vulnerable
+  transitive `Newtonsoft.Json` 9.0.1 (advisory
+  [GHSA-5crp-9r3c-p9vr](https://github.com/advisories/GHSA-5crp-9r3c-p9vr)).
+  Every remaining dependency (`System.Memory`, `System.Numerics.Vectors`,
+  `Blake2Core`) is genuinely required — none are transitively provided —
+  and each is scoped with an `ItemGroup` `Condition` to only the TFMs that
+  actually lack the type in-box (`net462`/`netstandard2.0`; `net6.0`+ needs
+  none of them).
+
+### Not everything was ported — here's the full accounting
+
+Of upstream's 3 open PRs, 2 revivable closed PRs, and roughly 19 open/relevant
+issues, only the four items above were actually adopted. Everything else:
+
+- **Already merged into upstream `master`** (nothing to port): PRs #50, #51,
+  #58, #60.
+- **Deliberately deferred as too risky to port as-is**:
+  - **Nullable reference type annotations** ([PR #67](https://github.com/kmaragon/Konscious.Security.Cryptography/pull/67))
+    — genuinely useful, but turning on `Nullable` across a codebase not
+    written with it in mind, under `TreatWarningsAsErrors`, is a much larger
+    and riskier change than the diff suggests.
+  - **SIMD/AVX2 intrinsics for Blake2b** ([PR #52](https://github.com/kmaragon/Konscious.Security.Cryptography/pull/52),
+    40-55% faster in the author's benchmarks) — the author's own words:
+    *"done at 2 AM... no idea if it's safe."* Zero code review, three-plus
+    years stale, touches the core compression function.
+  - **`SingleThreaded` opt-in hashing mode** ([PR #53](https://github.com/kmaragon/Konscious.Security.Cryptography/pull/53))
+    — a reasonable idea (relevant to WASM/Blazor per
+    [issue #59](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/59)),
+    but the diff bundles it with an inferior `GetBytes` fix and was never
+    reviewed.
+  - **Removing remaining `unsafe` blocks** ([issue #49](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/49))
+    — directionally good, no diff exists to port, needs benchmarking.
+- **Duplicates, already-explained, or out of scope, no action taken**:
+  strong-naming duplicates (#55, #57 — folded into #38 above), "working as
+  intended" memory/GC behavior ([#64](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/64),
+  [#56](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/56)),
+  stale/EOL reports ([#41](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/41),
+  [#44](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/44)),
+  a support question ([#65](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/65)),
+  and large API redesigns out of scope for a fork this size (`ref struct Argon2`
+  per [#54](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/54),
+  Blake3 support per [#39](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/39)).
+
+## Browser / WebAssembly
+
+The **synchronous** `Argon2.GetBytes(int)` **cannot complete on a
+single-threaded runtime** (browser WASM being the practical case) — sync or
+async internally, it still blocks the calling thread waiting on work that
+needs that same thread to run. This is inherited from Konscious's internal
+implementation, not something this fork introduces or can safely paper over.
+Verified empirically in a Blazor WebAssembly app (`net10.0-browser`,
+`Environment.ProcessorCount == 1`):
+
+- `GetBytesAsyncImpl` schedules every lane's work via `Task.Run(...)` /
+  `Task.WhenAll(...)`, regardless of `DegreeOfParallelism`.
+- A single-threaded runtime has no second thread for that scheduled work to
+  run on, so anything that blocks waiting for it fails. In practice this
+  isn't a silent hang: `GetBytes`'s `GetAwaiter().GetResult()` throws
+  `PlatformNotSupportedException: Cannot wait on monitors on this runtime`
+  immediately — Mono's WASM runtime refuses the blocking wait outright
+  rather than deadlocking the page.
+- `GetBytesAsync`, by contrast, **does** run to completion on a
+  single-threaded runtime — confirmed at both `DegreeOfParallelism = 1` and
+  `= 2` — because awaiting it (all the way up the call stack, with no
+  synchronous blocking anywhere) lets the runtime's single thread return to
+  the event loop and actually execute the queued work. Output matched the
+  identical call on desktop byte-for-byte. This is the API to use in a
+  browser.
+
+If you need Argon2id in a Blazor WebAssembly or other browser-hosted .NET
+app: `await GetBytesAsync(...)`, don't call `GetBytes(...)` or block on
+`GetBytesAsync(...).Result`/`.GetAwaiter().GetResult()`. Better still, hash
+credentials server-side — a browser is a poor place to run a deliberately
+slow, memory-hard KDF regardless of threading. `TopSecret.ProtectedString`
+takes the second approach for its own `ComputeArgon2idHash`: it throws
+`PlatformNotSupportedException` up front on `net10.0-browser` rather than
+risk a silent hang, and directs callers to hash server-side. See that
+project's README for the full rationale.
+
+**Blake2 doesn't have this problem.** `HMACBlake2B` contains no `Task`,
+`Task.Run`, or any async/threading code at all — confirmed by inspecting the
+whole `TopSecret.Cryptography.Blake2` source (`grep`-verified, zero matches).
+Unlike Argon2's lane-parallel KDF, Blake2b's compression is inherently
+sequential, so `ComputeHash`/`Initialize` run exactly the same way on a
+single-threaded WASM runtime as anywhere else — no fix was needed.
 
 ## Usage
 
-You can use Blake2B interchangeably with any code that uses [`System.Security.Cryptography.HashAlgorithm`](https://docs.microsoft.com/en-us/dotnet/core/api/system.security.cryptography.hashalgorithm#System_Security_Cryptography_HashAlgorithm) Or [`System.Security.Cryptography.HMAC`](https://docs.microsoft.com/en-us/dotnet/core/api/system.security.cryptography.hmac#System_Security_Cryptography_HMAC) And usage is generally consistent with both.
+### Argon2
 
-In the project.json:
-```JSON
-"dependencies":
+There are Argon2i, Argon2d, and Argon2id implementations, all standard
+`System.Security.Cryptography.DeriveBytes` types with the same constructor
+and property shape as `Rfc2898DeriveBytes` (PBKDF2), but memory-hard. One
+difference from `Rfc2898DeriveBytes` worth knowing: `Reset()` is a no-op and
+every `GetBytes`/`GetBytesAsync` call re-derives from scratch — consecutive
+calls return identical bytes rather than continuing a stream, so don't use
+them the way you'd pull a key and then an IV out of PBKDF2.
+
+```csharp
+using TopSecret.Cryptography;
+
+byte[] password = ...;
+using var argon2 = new Argon2id(password)
 {
-  "Konscious.Security.Cryptography.Blake2": "1.0.*"
-}
-```
-Create an instance of the algorithm:
+    DegreeOfParallelism = 8,   // lanes; tune to your hardware
+    MemorySize = 65536,        // KiB (OWASP recommends >= 19 456 for interactive logins)
+    Iterations = 3,            // OWASP recommends >= 3 for interactive logins
+    Salt = salt,               // unique per secret, >= 8 bytes
+    AssociatedData = userId,   // optional
+    KnownSecret = pepper,      // optional
+};
 
-```C#
-using Konscious.Security.Cryptography;
-```
-```C#
-var hashAlgorithm = new Blake2B(512);
-```
-This will give you a default implementation with no salt that generates a 512 bit key
-```
-byte[] key = ...
-var hashAlgorithm = new Blake2B(key, 512);
-```
-This will specify some salt to use for the 512 bit hash. Hash size can be any 8 bit aligned value between 8 and 512. The key can be any size between 0 and 64 bytes.
-
-The algorithm needs to be initialized before use:
-```C#
-hashAlgorithm.Initialize();
-```
-Then it can be used with any of the standard HashAlgorithm overloads
-```C#
-Stream p = ...
-hashAlgorithm.Hash(p);
-```
-```C#
-byte[] a = ...
-hashAlgorithm.Hash(a);
-```
-And as consistent with any other HMAC implementation:
-```C#
-hashAlgorithm.Key = otherByteArray;
+byte[] syncHash = argon2.GetBytes(32);              // sync — see Browser/WebAssembly above
+byte[] asyncHash = await argon2.GetBytesAsync(32);  // async — safe everywhere, including WASM
 ```
 
-# Konscious.Security.Cryptography.Argon2
+| Property | Type | Required? | Description |
+|---|---|---|---|
+| `DegreeOfParallelism` | `int` | required | Number of lanes to segment memory into; affects the hash and can be tuned for the target hardware. |
+| `MemorySize` | `int` | required | Memory cost in KiB. The main lever for Argon2's memory-hardness. |
+| `Iterations` | `int` | required | Time cost. Argon2 needs far fewer iterations than PBKDF2 for equivalent security. |
+| `Salt` | `byte[]` | recommended | Standard per-secret salt. |
+| `AssociatedData` | `byte[]` | optional | Extra data folded into the hash (not secret, but binds the hash to a context). |
+| `KnownSecret` | `byte[]` | optional | An additional secret ("pepper") folded into the hash. |
 
-[NuGet package](https://www.nuget.org/packages/Konscious.Security.Cryptography.Argon2/)
+`GetBytes`/`GetBytesAsync` accept up to 1024 bytes of output.
 
-An implementation of Argon2 winner of PHC
+Argon2d is faster but timing-attack-observable; Argon2i is timing-attack
+resistant but slower; Argon2id (recommended by OWASP, and the default choice
+in most consumers) hybridizes the two.
 
-https://password-hashing.net/#argon2
+### Blake2
 
-Usage follows standard types found in System.Security.Cryptography in corefx. Specifically DeriveBytes.
+Blake2b implements `System.Security.Cryptography.HMAC`, so it's a drop-in
+anywhere that accepts `HashAlgorithm`/`HMAC`.
 
-## Usage
+```csharp
+using TopSecret.Cryptography;
 
-There is both an Argon2i and Argon2d implementation included in this library. Argon2d is less intensive but subject to timing attacks. That is, if an attacker is appropriately positioned, they can observe the nanosecond differences in processing keys to perform a non-naive brute force attack to reverse the key. Argon2i is non-deterministic so there is no way for an attacker to deduce qualities of the password even if they can observe individual clock cycles and is thus more secure where timing attacks are possible.
+var hmac = new HMACBlake2B(512);        // unkeyed, 512-bit output
+hmac.Initialize();
+byte[] digest = hmac.ComputeHash(data);
 
-Both are standard implementations of the [`System.Security.Cryptography.DeriveBytes`](https://docs.microsoft.com/en-us/dotnet/core/api/system.security.cryptography.derivebytes#System_Security_Cryptography_DeriveBytes) type from corefx. This is commonly used for less secure password hashing via [`System.Security.Cryptography.Rfc2898DeriveBytes`](https://docs.microsoft.com/en-us/dotnet/core/api/system.security.cryptography.rfc2898derivebytes#System_Security_Cryptography_Rfc2898DeriveBytes) which implements the standard PBKDF2 scheme. Argon2 provides a more secure alternative for password hashing.
-
-Project.json:
-```JSON
-  "dependencies":
-  {
-      "Konscious.Security.Cryptography.Argon2": "1.0.*"
-  }
+byte[] key = ...;
+var keyed = new HMACBlake2B(key, 512);  // keyed, 512-bit output
 ```
 
-As with Rfc2898DeriveBytes, an Argon2 object is constructed with the password to be hashed:
-```C#
-using Konscious.Security.Cryptography;
-```
-```C#
-byte[] password = ...
-var argon2 = new Argon2i(password);
-```
-or
-```C#
-var argon2 = new Argon2d(password);
-```
-or
-```C#
-var argon2 = new Argon2id(password);
-```
-Various attributes can be added to secure the hash:
+Hash size can be any 8-bit-aligned value from 8 to 512 bits; keys can be 0
+to 64 bytes.
 
-| Property           | Type      | Required?   |    Description
-|--------------------|-----------|-------------|-----------------
-|DegreeOfParallelism | int       | REQUIRED    | Argon2 is memory hard and takes advantage of modern processors tendency to be multi-core. It does this by segmenting chunks of memory into lanes. Degree of parallelism specifies how many of these lanes will be used to generate the hash. This value affects the hash itself but can be altered for ideal run time given the processor and number of cores.
-|MemorySize          | int       | REQUIRED    | The amount of memory (in KiB) to use to calculate the hash. This is the property that is used to tweak the memory-hard property of Argon2. Please see the Argon2 documentation for more details about how to tweak this, DegreeOfParallelism, and Iterations to suit your needs
-|Iterations          | int       | REQUIRED    | The number of iterations to perform to compute the hash. Because of Argon2's higher security, huge values like with PBKDF2 are not as necessary, although multiple iterations are still very much recommended.
-|Salt                | byte[]    | RECOMMENDED | Standard Salt value for the Hash Algorithm
-|AssociatedData      | byte[]    | OPTIONAL    | Additional associated data to use to compute the hash. This adds another layer of inderection for an attacker to reverse engineer the hash
-|KnownSecret         | byte[]    | OPTIONAL    | An additional secret to use for the hash for extra security
+## Building
 
-And the primary hash method:
-````csharp
-byte[] GetBytes(int)
-````
-Which takes the number of bytes to generate. This implementation will accept only up to 1024 bytes as input.
-
-```C#
-byte[] salt;
-byte[] userUuidBytes;
-...
-argon2.DegreeOfParallelism = 16;
-argon2.MemorySize = 8192;
-argon2.Iterations = 40;
-argon2.Salt = salt;
-argon2.AssociatedData = userUuidBytes;
-
-var hash = argon2.GetBytes(128);
 ```
+dotnet build TopSecret.Cryptography.sln
+dotnet test TopSecret.Cryptography.Argon2.Test
+dotnet test TopSecret.Cryptography.Blake2.Test
+```
+
+## License
+
+MIT — see [LICENSE](LICENSE). Original work Copyright (c) 2017 Keef Aragon;
+fork additions Copyright (c) 2026 Alpaq92.

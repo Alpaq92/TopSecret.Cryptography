@@ -1,6 +1,6 @@
 using System;
 
-namespace Konscious.Security.Cryptography
+namespace TopSecret.Cryptography
 {
     internal static class ModifiedBlake2
     {
