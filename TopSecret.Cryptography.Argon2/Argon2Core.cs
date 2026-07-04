@@ -38,7 +38,7 @@ namespace TopSecret.Cryptography
             {
                 for (var s = 0; s < 4; s++)
                 {
-                    var segment = Enumerable.Range(0, lanes.Length).Select(l => Task.Run(() =>
+                    void ProcessLane(int l)
                     {
                         var lane = lanes[l];
                         var segmentLength = lane.BlockCount / 4;
@@ -69,9 +69,50 @@ namespace TopSecret.Cryptography
                             Compress(curBlock, refBlock, lanes[prevLane][prevOffset].Span);
                             prevOffset = curOffset;
                         }
-                    }));
+                    }
 
-                    await Task.WhenAll(segment).ConfigureAwait(false);
+                    // Lane 0 always runs inline, on the calling thread. Lanes
+                    // 1..N-1 (if any) are dispatched via Task.Run — .ToArray()
+                    // forces that dispatch to happen NOW, before ProcessLane(0)
+                    // runs, so on a multi-core host they genuinely run
+                    // concurrently with lane 0 rather than starting only after
+                    // it finishes (Enumerable.Select is lazy; without eager
+                    // materialization here, Task.WhenAll wouldn't enumerate —
+                    // and therefore wouldn't queue — the Task.Run calls until
+                    // after the inline call below already returned).
+                    //
+                    // At DegreeOfParallelism == 1 (the only value used on
+                    // browser WASM), Enumerable.Range(1, 0) is empty: no
+                    // Task.Run ever happens, and awaiting Task.WhenAll of an
+                    // empty/already-complete set resolves synchronously
+                    // without suspending — so this loop iteration, and by
+                    // extension the whole method, never touches the thread
+                    // pool and never needs a second thread to make progress.
+                    //
+                    // Cross-lane reads (IndexAlpha's sameLane=false branch)
+                    // only ever address blocks from an already-completed
+                    // pass/slice, never the slice currently being written —
+                    // so lane execution order within a slice (inline+
+                    // concurrent, inline+sequential, or original all-Task.Run)
+                    // cannot change the output, only wall-clock time.
+                    var rest = Enumerable.Range(1, lanes.Length - 1).Select(l => Task.Run(() => ProcessLane(l))).ToArray();
+                    try
+                    {
+                        ProcessLane(0);
+                    }
+                    catch
+                    {
+                        // Lanes 1..N-1 are already dispatched. Observe them
+                        // before propagating lane 0's failure, so they can't
+                        // outlive this method as orphaned background work
+                        // still mutating shared lane memory after the caller
+                        // has already seen this call fault.
+                        await SwallowAsync(rest).ConfigureAwait(false);
+                        throw;
+                    }
+
+                    await Task.WhenAll(rest).ConfigureAwait(false);
+
                     start = 0;
                 }
             }
@@ -157,38 +198,67 @@ namespace TopSecret.Cryptography
                 throw new InvalidOperationException($"Memory should be enough to provide at least 4 blocks per {nameof(DegreeOfParallelism)}");
             }
 
-            Task[] init = new Task[lanes.Length * 2];
+            // Pre-allocate every lane's storage synchronously, before any
+            // initialization work starts — matching the original's guarantee
+            // that the `lanes` array is fully populated before any of its
+            // elements are touched concurrently.
             for (var i = 0; i < lanes.Length; ++i)
             {
                 lanes[i] = new Argon2Lane(blocksPerLane);
-
-                int taskIndex = i * 2;
-                int iClosure = i;
-                init[taskIndex] = Task.Run(() =>
-                {
-                    var stream = new LittleEndianActiveStream();
-                    stream.Expose(blockHash);
-                    stream.Expose(0);
-                    stream.Expose(iClosure);
-
-                    ModifiedBlake2.Blake2Prime(lanes[iClosure][0], stream);
-                });
-
-                init[taskIndex + 1] = Task.Run(() =>
-                {
-                    var stream = new LittleEndianActiveStream();
-                    stream.Expose(blockHash);
-                    stream.Expose(1);
-                    stream.Expose(iClosure);
-
-                    ModifiedBlake2.Blake2Prime(lanes[iClosure][1], stream);
-                });
             }
 
-            await Task.WhenAll(init).ConfigureAwait(false);
+            void InitLane(int l)
+            {
+                var stream0 = new LittleEndianActiveStream();
+                stream0.Expose(blockHash);
+                stream0.Expose(0);
+                stream0.Expose(l);
+                ModifiedBlake2.Blake2Prime(lanes[l][0], stream0);
+
+                var stream1 = new LittleEndianActiveStream();
+                stream1.Expose(blockHash);
+                stream1.Expose(1);
+                stream1.Expose(l);
+                ModifiedBlake2.Blake2Prime(lanes[l][1], stream1);
+            }
+
+            // Same pattern as Hash(): lane 0 runs inline, lanes 1..N-1 (if
+            // any) are dispatched via Task.Run with the dispatch forced eager
+            // via .ToArray() so they genuinely overlap with the inline lane
+            // on a multi-core host. At DegreeOfParallelism == 1 this is an
+            // empty array — no Task.Run, no thread-pool touch.
+            var rest = Enumerable.Range(1, lanes.Length - 1).Select(l => Task.Run(() => InitLane(l))).ToArray();
+            try
+            {
+                InitLane(0);
+            }
+            catch
+            {
+                // See the matching catch in Hash(): don't leave lanes 1..N-1
+                // as orphaned background work after this method has faulted.
+                await SwallowAsync(rest).ConfigureAwait(false);
+                throw;
+            }
+
+            await Task.WhenAll(rest).ConfigureAwait(false);
 
             Array.Clear(blockHash, 0, blockHash.Length);
             return lanes;
+        }
+
+        private static async Task SwallowAsync(Task[] tasks)
+        {
+            try
+            {
+                await Task.WhenAll(tasks).ConfigureAwait(false);
+            }
+            catch
+            {
+                // The lane-0 failure being propagated by the caller's own
+                // catch block already identifies the problem; this only
+                // exists to ensure lanes 1..N-1 are awaited (so they can't
+                // outlive the call), not to report their failures too.
+            }
         }
 
         internal byte[] Initialize(byte[] password)

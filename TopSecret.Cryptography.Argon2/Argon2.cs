@@ -35,10 +35,14 @@ namespace TopSecret.Cryptography
         /// Implementation of GetBytes
         /// </summary>
         /// <remarks>
-        /// Blocks until the hash completes, so it cannot finish on
-        /// single-threaded runtimes such as browser WASM — use
-        /// <see cref="GetBytesAsync"/> there. See the README's
-        /// "Browser / WebAssembly" section for the full story.
+        /// Blocks until the hash completes. At <see cref="DegreeOfParallelism"/> = 1
+        /// (the only value a single-threaded runtime such as browser WASM can
+        /// run) this now completes there too, since the hash never touches the
+        /// thread pool in that case. At <see cref="DegreeOfParallelism"/> &gt; 1
+        /// on a detected single-threaded host, this throws
+        /// <see cref="PlatformNotSupportedException"/> up front instead of
+        /// blocking. See the README's "Browser / WebAssembly" section for the
+        /// full story.
         /// </remarks>
         public override byte[] GetBytes(int bc)
         {
@@ -103,6 +107,29 @@ namespace TopSecret.Cryptography
 
             if (DegreeOfParallelism < 1)
                 throw new InvalidOperationException("Argon2 requires at least 1 thread (DegreeOfParallelism)");
+
+            if (DegreeOfParallelism > 1 && IsSingleThreadedHost())
+                throw new PlatformNotSupportedException(
+                    $"{nameof(DegreeOfParallelism)} = {DegreeOfParallelism} requires a host that can run more than " +
+                    "one thread. This host (browser WASM, or a process pinned to a single core) can only run " +
+                    $"Argon2 with {nameof(DegreeOfParallelism)} = 1 — set it to 1 before hashing here.");
+        }
+
+        /// <summary>
+        /// True on a runtime that cannot service more than one lane's worth of
+        /// concurrent work — browser WASM (always single-threaded today) or a
+        /// host pinned to a single logical core. Checked so a <see cref="DegreeOfParallelism"/>
+        /// misconfiguration fails fast with an actionable message here, rather
+        /// than surfacing later as the runtime's own opaque failure to block a
+        /// thread that queued work depends on to make progress.
+        /// </summary>
+        private static bool IsSingleThreadedHost()
+        {
+#if NET5_0_OR_GREATER
+            if (OperatingSystem.IsBrowser())
+                return true;
+#endif
+            return Environment.ProcessorCount == 1;
         }
 
         private Task<byte[]> GetBytesAsyncImpl(int bc)
