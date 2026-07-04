@@ -1,22 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
   <title>TopSecret.Cryptography</title>
   <defs>
-    <!-- Open Color gray.4 -> gray.5, top-left to bottom-right.
+    <!-- Open Color pink.6 -> grape.6, top-left to bottom-right.
          Source: https://yeun.github.io/open-color/ (raw values verified
          against https://github.com/yeun/open-color/blob/master/open-color.json). -->
-    <linearGradient id="openColorGray" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#CED4DA"/>
-      <stop offset="100%" stop-color="#ADB5BD"/>
+    <linearGradient id="openColorPinkGrape" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E64980"/>
+      <stop offset="100%" stop-color="#BE4BDB"/>
     </linearGradient>
-    <!-- White depth gradient for the T: bright top-left -> dimmer bottom-right, matching the shield's light direction. -->
+    <!-- White depth gradient for the T: bright top-left -> dimmer bottom-right, matching the shield's light direction.
+         Uses Open Color pink.1 (a pale tint of the shield's own hue family) rather than pink.6 itself,
+         which is too saturated for a highlight/shadow effect on the letter. -->
     <linearGradient id="tDepth" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#FFFFFF"/>
-      <stop offset="100%" stop-color="#CED4DA"/>
+      <stop offset="100%" stop-color="#FFDEEB"/>
     </linearGradient>
   </defs>
 
   <!-- Material Design Icons "shield" path (24x24), uniformly scaled to 256. -->
-  <path fill="url(#openColorGray)"
+  <path fill="url(#openColorPinkGrape)"
         transform="scale(10.6667)"
         d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1Z"/>
 
