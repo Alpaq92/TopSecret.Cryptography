@@ -5,8 +5,8 @@ name: Release
 # .release-please-manifest.json and prepends the generated section to
 # CHANGELOG.md. The PR is queued for auto-merge, so it lands on its own once
 # the required checks are green. Merging it creates the tag + GitHub Release;
-# the publish job then packs both NuGet packages at the new tag and pushes to
-# NuGet.org.
+# the publish job then packs every IsPackable project at the new tag and
+# pushes them all to NuGet.org.
 #
 # This is also how the monthly Dependabot dependency refresh (dependabot.yml,
 # feat(deps) commit prefix) turns into an actual published release without a
@@ -132,7 +132,8 @@ jobs:
       - name: Test (Blake2)
         run: dotnet test TopSecret.Cryptography.Blake2.Test/TopSecret.Cryptography.Blake2.Test.csproj --configuration Release --no-build --verbosity normal
 
-      # Sln-wide pack emits both IsPackable projects (Argon2, Blake2).
+      # Sln-wide pack emits every IsPackable project (Argon2, Blake2,
+      # ArgonBenchmarks, ComparisonHarness).
       - name: Pack
         run: dotnet pack TopSecret.Cryptography.sln --configuration Release --no-build -p:PackageVersion=${{ steps.tag.outputs.version }} -o ./nupkg
 

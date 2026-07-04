@@ -6,7 +6,7 @@ Thanks for your interest! This document covers what you need to build, test, and
 
 - **.NET SDK 8.0 or newer**, with the 10.0 SDK available for the `net10.0` target (`global.json` doesn't pin a floor beyond that — this repo has no analyzer-package version dependency forcing a higher one).
 - `net462` (a plain .NET Framework target, not `net46` — see the README for why) only builds on Windows. Linux/macOS contributors: build individual projects excluding that TFM (`dotnet build TopSecret.Cryptography.Argon2 -f net8.0`), or rely on CI's Windows leg to catch `net462`-specific issues.
-- No mobile/browser workloads are needed to build or test either **published package** — unlike some sibling `TopSecret.*` packages, `TopSecret.Cryptography.Argon2`/`.Blake2` have no `net10.0-browser`/`-android`/`-ios` targets; they're plain managed IL, multi-targeted across `netstandard2.0;net462;net6.0;net8.0;net10.0`. The one exception is `TopSecret.Cryptography.Argon2.WasmSmokeTest` (see below) — it targets `browser-wasm` and needs `dotnet workload install wasm-tools` plus Node.js to build and run; you only need that if you're touching `Argon2Core.cs`'s lane-dispatch code.
+- No mobile/browser workloads are needed to build or test any of the **published packages** — unlike some sibling `TopSecret.*` packages, none of `TopSecret.Cryptography.Argon2`/`.Blake2`/`.ArgonBenchmarks`/`.ComparisonHarness` have `net10.0-browser`/`-android`/`-ios` targets; they're plain managed IL. The one exception is `TopSecret.Cryptography.Argon2.WasmSmokeTest` (see below, and not itself published to NuGet) — it targets `browser-wasm` and needs `dotnet workload install wasm-tools` plus Node.js to build and run; you only need that if you're touching `Argon2Core.cs`'s lane-dispatch code.
 
 ## Build, test, run
 
@@ -14,8 +14,8 @@ Thanks for your interest! This document covers what you need to build, test, and
 dotnet build TopSecret.Cryptography.sln
 dotnet test  TopSecret.Cryptography.Argon2.Test/TopSecret.Cryptography.Argon2.Test.csproj
 dotnet test  TopSecret.Cryptography.Blake2.Test/TopSecret.Cryptography.Blake2.Test.csproj
-dotnet run --project ArgonBenchmarks       # BenchmarkDotNet perf suite
-dotnet run --project ComparisonHarness     # cross-validates against a Python reference implementation
+dotnet run --project TopSecret.Cryptography.ArgonBenchmarks     # BenchmarkDotNet perf suite
+dotnet run --project TopSecret.Cryptography.ComparisonHarness   # cross-validates against a Python reference implementation
 
 # WASM smoke test — not part of the .sln above (needs wasm-tools, which the
 # main build doesn't install); only relevant if you're touching lane dispatch:
@@ -32,8 +32,8 @@ node TopSecret.Cryptography.Argon2.WasmSmokeTest/bin/Release/net10.0/browser-was
 | `TopSecret.Cryptography.Blake2` | Blake2b, RFC 7693 (`System.Security.Cryptography.HMAC`), published standalone for consumers who want Blake2b directly. |
 | `TopSecret.Cryptography.Argon2.WasmSmokeTest` | Not a unit test (xunit doesn't run on `browser-wasm`) — a standalone `browser-wasm` console app, run under Node's V8 in CI, that actually executes `GetBytes`/`GetBytesAsync` on a genuinely single-threaded host and checks the output against an externally-verified vector. Excluded from `TopSecret.Cryptography.sln` because it needs the `wasm-tools` workload the main build doesn't install; see its own CI job in `ci.yml`. |
 | `*.Test` | xunit suites, one per package. |
-| `ArgonBenchmarks` | BenchmarkDotNet suite (`net462`/`net8.0`/`net10.0` jobs). |
-| `ComparisonHarness` / `PythonHarness` | Cross-language parity fuzzing against a Python Argon2 implementation. |
+| `TopSecret.Cryptography.ArgonBenchmarks` | BenchmarkDotNet suite (`net462`/`net8.0`/`net10.0` jobs). Published to NuGet.org (same icon/readme treatment as the two library packages) so the benchmark results behind this repo's performance claims are independently reproducible — not meant to be referenced as a dependency from your own code. |
+| `TopSecret.Cryptography.ComparisonHarness` / `PythonHarness` | Cross-language parity fuzzing against a Python Argon2 implementation. Same NuGet publishing rationale as `TopSecret.Cryptography.ArgonBenchmarks` above — reproducibility, not a dependency. `PythonHarness` itself is a plain Python script, not a .NET project, so it isn't published. |
 
 ## Rules that will fail your build or review
 
