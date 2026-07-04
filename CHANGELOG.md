@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v1.4.5...v2.0.0) (2026-07-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* **argon2:** DegreeOfParallelism > 1 on a detected single-threaded host (OperatingSystem.IsBrowser() or Environment.ProcessorCount == 1) now throws PlatformNotSupportedException from both GetBytes and GetBytesAsync. Previously, GetBytesAsync completed successfully in that configuration (verified and documented behavior of the prior release) - any caller relying on that completing, rather than failing fast, will now see an exception instead. Separately, TopSecret.Cryptography.Argon2 no longer brings in TopSecret.Cryptography.Blake2 as a transitive NuGet dependency: code that referenced Blake2's public HMACBlake2B without an explicit PackageReference to TopSecret.Cryptography.Blake2 will fail to build after upgrading and needs that reference added directly.
+
+### Bug Fixes
+
+* **argon2:** make GetBytes complete on single-threaded runtimes at p=1 ([f053fd4](https://github.com/Alpaq92/TopSecret.Cryptography/commit/f053fd4facb2bafd2cab7097826686a3efb227e9))
+
 ## [1.4.5](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v1.4.4...v1.4.5) (2026-07-04)
 
 
