@@ -4,6 +4,12 @@
     <OutputType>Exe</OutputType>
     <TargetFrameworks>net462;net8.0;net10.0</TargetFrameworks>
     <DebugType>embedded</DebugType>
+    <!-- Internal dev tool, never meant to ship as a NuGet package. Without
+         this, `dotnet pack` on the solution packs it anyway (dotnet pack
+         defaults every project to packable regardless of OutputType) —
+         confirmed live: it shipped to NuGet.org as ArgonBenchmarks 1.4.3
+         before this fix. -->
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
