@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.3](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v2.1.2...v2.1.3) (2026-07-04)
+
+
+### Documentation
+
+* try icon in Open Color pink.6 -&gt; grape.6 ([0a5d893](https://github.com/Alpaq92/TopSecret.Cryptography/commit/0a5d893d51deb55028d93b7e220519b3bd5fcd91))
+
 ## [2.1.2](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v2.1.1...v2.1.2) (2026-07-04)
 
 
