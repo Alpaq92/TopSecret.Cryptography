@@ -5,16 +5,16 @@ Argon2 and Blake2 for .NET — a maintained fork of
 
 This repository is a fork of [kmaragon/Konscious.Security.Cryptography](https://github.com/kmaragon/Konscious.Security.Cryptography),
 renamed to `TopSecret.Cryptography` and re-namespaced to match. The primary
-motivation was making Argon2id password hashing actually work **in the
-browser** for [TopSecret.ProtectedString](https://github.com/Alpaq92/TopSecret.ProtectedString)'s
-Blazor WebAssembly demo — via `GetBytesAsync`, since the synchronous API
-can't complete on a single-threaded runtime (see
-[Browser / WebAssembly](#browser--webassembly) below). Beyond that, this fork
-tracks modern .NET target frameworks, carries a strong name, and folds in a
-handful of long-standing, low-risk fixes from upstream's open PR/issue
-backlog. All credit for the underlying Argon2 and Blake2 implementations
-belongs to [Keef Aragon](https://github.com/kmaragon) and Konscious's
-contributors — see [LICENSE](LICENSE).
+motivation was singular: **make Argon2 work on WASM** — nothing more, nothing
+less. That does *not* mean "expose an async Argon2id API for browser apps to
+call" — see [Browser / WebAssembly](#browser--webassembly) below for why that
+option was evaluated and rejected as a security downgrade at the consuming
+layer, despite the raw async call completing correctly on WASM. Beyond that,
+this fork tracks modern .NET target frameworks, carries a strong name, and
+folds in a handful of long-standing, low-risk fixes from upstream's open
+PR/issue backlog. All credit for the underlying Argon2 and Blake2
+implementations belongs to [Keef Aragon](https://github.com/kmaragon) and
+Konscious's contributors — see [LICENSE](LICENSE).
 
 ## Packages
 
@@ -141,8 +141,9 @@ The **synchronous** `Argon2.GetBytes(int)` **cannot complete on a
 single-threaded runtime** (browser WASM being the practical case) — sync or
 async internally, it still blocks the calling thread waiting on work that
 needs that same thread to run. This is inherited from Konscious's internal
-implementation, not something this fork introduces or can safely paper over.
-Verified empirically in a Blazor WebAssembly app (`net10.0-browser`,
+implementation ([issue #22](https://github.com/kmaragon/Konscious.Security.Cryptography/issues/22)),
+not something this fork introduces or can safely paper over. Verified
+empirically in a Blazor WebAssembly app (`net10.0-browser`,
 `Environment.ProcessorCount == 1`):
 
 - `GetBytesAsyncImpl` schedules every lane's work via `Task.Run(...)` /
@@ -158,18 +159,58 @@ Verified empirically in a Blazor WebAssembly app (`net10.0-browser`,
   `= 2` — because awaiting it (all the way up the call stack, with no
   synchronous blocking anywhere) lets the runtime's single thread return to
   the event loop and actually execute the queued work. Output matched the
-  identical call on desktop byte-for-byte. This is the API to use in a
-  browser.
+  identical call on desktop byte-for-byte.
 
-If you need Argon2id in a Blazor WebAssembly or other browser-hosted .NET
-app: `await GetBytesAsync(...)`, don't call `GetBytes(...)` or block on
-`GetBytesAsync(...).Result`/`.GetAwaiter().GetResult()`. Better still, hash
-credentials server-side — a browser is a poor place to run a deliberately
-slow, memory-hard KDF regardless of threading. `TopSecret.ProtectedString`
-takes the second approach for its own `ComputeArgon2idHash`: it throws
-`PlatformNotSupportedException` up front on `net10.0-browser` rather than
-risk a silent hang, and directs callers to hash server-side. See that
-project's README for the full rationale.
+That's where this fork's job ends: confirming the underlying async call
+genuinely completes correctly on WASM. **It is not a general endorsement of
+"expose an async Argon2id API to browser callers."** Whether that's actually
+safe depends entirely on what wraps the call, and for a security-critical
+credential type it usually isn't. A bare, stateless call —
+`new Argon2id(pw){...}; var h = await argon.GetBytesAsync(n);` — has nothing
+to regress. But a type that holds a lock across the whole hash operation (to
+protect pinned/locked plaintext scratch buffers, to guarantee `Dispose`
+returned ⇒ no library-held plaintext remains, or to serialize verify/mutate
+so a rotation can't race a stale check) cannot naively await mid-hash without
+releasing that lock — and releasing it changes the type's actual security
+properties, not just its threading model.
+
+This is exactly the evaluation [TopSecret.ProtectedString](https://github.com/Alpaq92/TopSecret.ProtectedString)
+did for its own `ComputeArgon2idHash`, and why it does **not** expose an async
+credential-hashing API on browser despite this fork proving the raw call
+works there. Quoting its README's `browser-wasm` section directly, because
+it's the authoritative account and shouldn't be paraphrased into something
+weaker:
+
+> Argon2id is not supported in the browser — deliberately. Konscious (the
+> managed Argon2 underneath) has no truly synchronous path: its sync
+> `GetBytes` is `Task.Run(...).Result`, which cannot complete on the
+> single-threaded WASM runtime — `.Result` blocks the only thread, and the
+> queued lane work needs that very thread (Konscious #22). The library fails
+> fast and honestly: `ComputeArgon2idHash` / `VerifyArgon2idHash` throw
+> `PlatformNotSupportedException` on `net10.0-browser`, and the live demo's
+> Argon2id step reports itself unsupported there. An awaited async wrapper
+> (which *would* complete on one thread) was prototyped and adversarially
+> reviewed, then **rejected**: releasing the instance lock across the KDF
+> `await` regresses the sync path's security invariants — overlapped hashes
+> multiply long-lived pinned plaintext scratch copies (page-granular
+> `mlock`/`VirtualLock` is not refcounted and the `RLIMIT_MEMLOCK` budget is
+> small), `Dispose` stops being a barrier proving no library-held plaintext
+> remains, and verify/mutate interleavings can accept a stale credential —
+> and the gate-and-guard machinery needed to restore them adds more
+> concurrency surface to a security-critical type than one platform's KDF is
+> worth. Browser guidance: verify credentials server-side (where they should
+> be verified anyway); the alternatives were also evaluated and rejected —
+> Isopoh (CC0 license), Soenneker (wraps the same Konscious), NSec (native
+> libsodium, no browser-wasm RID). Revisit if .NET's multithreaded WASM lands
+> or a permissively-licensed, browser-safe managed Argon2 appears.
+
+If you're building something other than a security-critical, lock-holding
+wrapper — a one-shot hash with no shared mutable state to protect —
+`await GetBytesAsync(...)` on WASM is exactly as safe as it is anywhere else,
+and this fork's verification stands. Don't call `GetBytes(...)` or block on
+`GetBytesAsync(...).Result`/`.GetAwaiter().GetResult()` there regardless; that
+part hasn't changed. The judgment call is entirely about what you build on
+top of it.
 
 **Blake2 doesn't have this problem.** `HMACBlake2B` contains no `Task`,
 `Task.Run`, or any async/threading code at all — confirmed by inspecting the

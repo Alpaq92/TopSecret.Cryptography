@@ -29,7 +29,8 @@ jobs:
       # never satisfied (mergeStateStatus stays BLOCKED forever).
       - name: Approve dependency PR
         if: steps.meta.outputs.package-ecosystem == 'nuget' || steps.meta.outputs.package-ecosystem == 'github_actions'
-        run: gh pr review --approve "$PR_URL" -b "Automatically approved: Dependabot dependency update, gated on CI passing."
+        run: |
+          gh pr review --approve "$PR_URL" -b "Automatically approved (Dependabot dependency update, gated on CI passing)."
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

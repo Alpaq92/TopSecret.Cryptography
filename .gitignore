@@ -215,3 +215,6 @@ $RECYCLE.BIN/
 /TopSecret.Cryptography.Blake2/Properties/PublishProfiles
 /nupkg-local/
 release_notes.txt
+
+# Local agent-tooling state (not repo content)
+.claude/
