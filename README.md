@@ -3,6 +3,8 @@
 <div align="center">
 <a href="https://www.nuget.org/packages/TopSecret.Cryptography.Argon2"><img alt="NuGet: TopSecret.Cryptography.Argon2" src="https://img.shields.io/nuget/v/TopSecret.Cryptography.Argon2.svg?label=TopSecret.Cryptography.Argon2"></a>
 <a href="https://www.nuget.org/packages/TopSecret.Cryptography.Blake2"><img alt="NuGet: .Blake2" src="https://img.shields.io/nuget/v/TopSecret.Cryptography.Blake2.svg?label=.Blake2"></a>
+<a href="https://www.nuget.org/packages/TopSecret.Cryptography.ArgonBenchmarks"><img alt="NuGet: .ArgonBenchmarks" src="https://img.shields.io/nuget/v/TopSecret.Cryptography.ArgonBenchmarks.svg?label=.ArgonBenchmarks"></a>
+<a href="https://www.nuget.org/packages/TopSecret.Cryptography.ComparisonHarness"><img alt="NuGet: .ComparisonHarness" src="https://img.shields.io/nuget/v/TopSecret.Cryptography.ComparisonHarness.svg?label=.ComparisonHarness"></a>
 <a href="https://github.com/Alpaq92/TopSecret.Cryptography/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Alpaq92/TopSecret.Cryptography/ci.yml?branch=master&label=CI"></a>
 <a href="https://github.com/Alpaq92/TopSecret.Cryptography/actions/workflows/release.yml"><img alt="Release" src="https://img.shields.io/github/actions/workflow/status/Alpaq92/TopSecret.Cryptography/release.yml?branch=master&label=Release"></a>
 <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
