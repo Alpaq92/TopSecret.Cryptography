@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v2.1.0...v2.1.1) (2026-07-04)
+
+
+### Documentation
+
+* add short NuGet-specific readmes; recolor icon to grayscale ([#20](https://github.com/Alpaq92/TopSecret.Cryptography/issues/20)) ([f5b606f](https://github.com/Alpaq92/TopSecret.Cryptography/commit/f5b606f8fbd02d32067a7aa39c18080f99ddb797))
+
 ## [2.1.0](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v2.0.0...v2.1.0) (2026-07-04)
 
 
