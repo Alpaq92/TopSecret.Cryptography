@@ -74,8 +74,9 @@ non-controversial for a small crypto library):
   (advisory [GHSA-7jgj-8wvc-jh57](https://github.com/advisories/GHSA-7jgj-8wvc-jh57));
   the modern targets don't need those packages at all. `net462` (not `net46`)
   because the current `System.Memory`/`System.Numerics.Vectors` releases
-  dropped support for plain `net46` — and `ArgonBenchmarks`/`ComparisonHarness`
-  already targeted `net462`, so this also fixes a pre-existing inconsistency
+  dropped support for plain `net46` — and `TopSecret.Cryptography.ArgonBenchmarks`/
+  `TopSecret.Cryptography.ComparisonHarness` already targeted `net462`, so
+  this also fixes a pre-existing inconsistency
   between the libraries and their own tooling. (Partial credit:
   [upstream PR #66](https://github.com/kmaragon/Konscious.Security.Cryptography/pull/66)
   proposed the `net10.0` addition; only its `TargetFrameworks` edits were
@@ -145,8 +146,8 @@ non-controversial for a small crypto library):
   `System.Numerics.Vectors` 4.5.0 → 4.6.1, `BenchmarkDotNet` /
   `BenchmarkDotNet.Diagnostics.Windows` 0.14.0 → 0.15.8 (0.15.x is the first
   line with a `Net10_0` runtime moniker — confirmed by inspecting the shipped
-  assembly — so `ArgonBenchmarks` now actually benchmarks `net10.0` instead
-  of just compiling it). `xunit.runner.visualstudio` and `Blake2Core` were
+  assembly — so `TopSecret.Cryptography.ArgonBenchmarks` now actually
+  benchmarks `net10.0` instead of just compiling it). `xunit.runner.visualstudio` and `Blake2Core` were
   already at their latest stable versions. This also dropped the 2018-era
   `Microsoft.NET.Test.Sdk`/`xunit` versions that pulled in a vulnerable
   transitive `Newtonsoft.Json` 9.0.1 (advisory

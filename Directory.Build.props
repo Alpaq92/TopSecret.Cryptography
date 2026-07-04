@@ -14,8 +14,9 @@
     time there). This is the same approach the .NET runtime/SDK's own repos
     use for their public/OSS-signed builds. Signing every project here, not
     just the two library projects, keeps InternalsVisibleTo friend assemblies
-    (the .Test projects, ArgonBenchmarks) on the same public key, which the
-    CLR requires once the granting assembly is strong-named.
+    (the .Test projects, TopSecret.Cryptography.ArgonBenchmarks) on the same
+    public key, which the CLR requires once the granting assembly is
+    strong-named.
   -->
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
