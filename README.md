@@ -156,6 +156,32 @@ non-controversial for a small crypto library):
   and each is scoped with an `ItemGroup` `Condition` to only the TFMs that
   actually lack the type in-box (`net462`/`netstandard2.0`; `net6.0`+ needs
   none of them).
+- **Argon2's internal working memory is wiped after every hash, not just
+  abandoned to the GC.** Two gaps, found while auditing the codebase after
+  the WASM fix above made Argon2 actually run in browser linear memory (the
+  same class of residual-copy concern already relevant to any managed
+  process, just newly relevant there too):
+  - `Finalize()` extracted the output tag from each lane's memory-hard
+    working state but never cleared that state afterward — the full
+    password/salt/secret-derived `ulong[]` backing every `Argon2Lane`
+    (`XorLanes` only ever touched each lane's *last* block, not the rest)
+    sat on the managed heap, unwiped, until the GC eventually reclaimed it.
+    Fixed via a new `Argon2Lane.Wipe()`, called on every lane at the end of
+    `Finalize()`.
+  - `LittleEndianActiveStream.ReserveBuffer` grew its internal buffer via
+    `Array.Resize`, which abandons the old (smaller) buffer without
+    clearing it. `Initialize()` reuses one stream instance across the
+    password, salt, secret, and associated data in turn — if a later
+    `Expose()` call needed a bigger buffer than an earlier one that had
+    just held the raw password, the password bytes were left sitting in
+    that discarded array. Fixed by wiping the old buffer before replacing
+    it, instead of copying content nothing needs (every caller overwrites
+    the full reserved range immediately anyway).
+
+  Both fixes are covered by tests that capture the actual buffer/lane
+  memory involved in a real call and assert it's zero afterward — not just
+  unit tests of the wipe logic in isolation — and both were confirmed to
+  fail against the pre-fix code as a control before being accepted.
 
 ### Not everything was ported — here's the full accounting
 
@@ -322,6 +348,15 @@ whole `TopSecret.Cryptography.Blake2` source (`grep`-verified, zero matches).
 Unlike Argon2's lane-parallel KDF, Blake2b's compression is inherently
 sequential, so `ComputeHash`/`Initialize` run exactly the same way on a
 single-threaded WASM runtime as anywhere else — no fix was needed.
+
+Now that Argon2 actually runs in the browser, its ~19 MiB (OWASP default)
+memory-hard working set really does allocate inside WASM linear memory and
+cost real, measurable time there — tune `MemorySize` down for
+resource-constrained browser deployments if that pressure matters,
+understanding the security tradeoff a smaller working set implies against
+GPU/ASIC attackers. See [Argon2's internal working memory is wiped after
+every hash](#what-differs-from-upstream) above for what happens to that
+memory once the hash completes.
 
 ## Usage
 

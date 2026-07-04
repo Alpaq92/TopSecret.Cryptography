@@ -337,5 +337,50 @@ namespace TopSecret.Cryptography
             var actual = await subject.Hash(Encoding.UTF8.GetBytes("P@ssw0rd!$"));
             Assert.Equal(expected, actual);
         }
+
+        /// <summary>
+        /// End-to-end, not just Argon2Lane.Wipe() in isolation: uses the
+        /// AfterWipeForTesting test hook to inspect the actual lanes a real
+        /// Hash() call used, immediately after Finalize() wipes them, to
+        /// verify the wipe genuinely reaches the buffers involved in a
+        /// complete hash — the memory-hard working state that would
+        /// otherwise sit unwiped on the managed heap after the call returns.
+        /// </summary>
+        [Fact]
+        public async Task Hash_WipesLaneMemoryAfterFinalize()
+        {
+            var subject = new Argon2idCore(32)
+            {
+                DegreeOfParallelism = 2,
+                Iterations = 1,
+                MemorySize = 32,
+                Salt = Encoding.UTF8.GetBytes("0123456789abcdef"),
+            };
+
+            Argon2Lane[] capturedLanes = null;
+            subject.AfterWipeForTesting = lanes => capturedLanes = lanes;
+
+            await subject.Hash(Encoding.UTF8.GetBytes("P@ssw0rd!$"));
+
+            Assert.NotNull(capturedLanes);
+            AssertAllLaneMemoryIsZero(capturedLanes);
+        }
+
+        // Span<T> can't cross an await boundary in an async method under
+        // this project's language version, so the actual check is factored
+        // into its own synchronous method rather than inlined above.
+        private static void AssertAllLaneMemoryIsZero(Argon2Lane[] lanes)
+        {
+            foreach (var lane in lanes)
+            {
+                for (var b = 0; b < lane.BlockCount; ++b)
+                {
+                    foreach (var word in lane[b].Span)
+                    {
+                        Assert.Equal(0UL, word);
+                    }
+                }
+            }
+        }
     }
 }
