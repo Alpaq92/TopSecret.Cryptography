@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.5](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v2.1.4...v2.1.5) (2026-07-04)
+
+
+### Documentation
+
+* move downloads badge after the package version badges ([#30](https://github.com/Alpaq92/TopSecret.Cryptography/issues/30)) ([4f74100](https://github.com/Alpaq92/TopSecret.Cryptography/commit/4f741005495c5fdb27b9250523867140ab5d8cbb))
+
 ## [2.1.4](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v2.1.3...v2.1.4) (2026-07-04)
 
 
