@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.6](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v2.1.5...v2.1.6) (2026-07-04)
+
+
+### Documentation
+
+* consolidate 2.1.0-2.1.2's content into the 2.1.3 changelog entry ([#32](https://github.com/Alpaq92/TopSecret.Cryptography/issues/32)) ([339bf0a](https://github.com/Alpaq92/TopSecret.Cryptography/commit/339bf0a47f18b929b316c923ea67968e4f6c9ac4))
+
 ## [2.1.5](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v2.1.4...v2.1.5) (2026-07-04)
 
 
