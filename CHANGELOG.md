@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v2.0.0...v2.1.0) (2026-07-04)
+
+
+### Features
+
+* **argon2:** wipe internal working memory after every hash ([#18](https://github.com/Alpaq92/TopSecret.Cryptography/issues/18)) ([a989a25](https://github.com/Alpaq92/TopSecret.Cryptography/commit/a989a2542249cf75c04958ee85d7deeff738c4ac))
+
 ## [2.0.0](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v1.4.5...v2.0.0) (2026-07-04)
 
 
