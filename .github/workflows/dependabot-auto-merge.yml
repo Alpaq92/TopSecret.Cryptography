@@ -19,9 +19,24 @@ jobs:
 
       # Dependency-update PRs (NuGet packages and GitHub Actions pins) are
       # exempt from the one-week review-soak that human PRs get
-      # (auto-merge-approved.yml): --auto merges them the moment the
-      # required checks pass. Branch protection still gates — this never
-      # bypasses a red build or a missing required approval.
+      # (auto-merge-approved.yml): they auto-merge the moment required
+      # checks pass. The ruleset still requires 1 approving review
+      # regardless of author, so this approves on the repo's behalf —
+      # github-actions[bot] approving a dependabot[bot] PR is a different
+      # actor than the author, so GitHub's no-self-approval rule doesn't
+      # block it. Without this step, `gh pr merge --auto` only ARMS the
+      # merge; it silently never fires because the review requirement is
+      # never satisfied (mergeStateStatus stays BLOCKED forever).
+      - name: Approve dependency PR
+        if: steps.meta.outputs.package-ecosystem == 'nuget' || steps.meta.outputs.package-ecosystem == 'github_actions'
+        run: gh pr review --approve "$PR_URL" -b "Automatically approved: Dependabot dependency update, gated on CI passing."
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Branch protection still gates the actual merge — this never
+      # bypasses a red build; it only satisfies the review requirement so
+      # the merge that CI unblocks can actually complete.
       - name: Enable auto-merge for dependency PRs
         if: steps.meta.outputs.package-ecosystem == 'nuget' || steps.meta.outputs.package-ecosystem == 'github_actions'
         run: gh pr merge --auto --squash "$PR_URL"
