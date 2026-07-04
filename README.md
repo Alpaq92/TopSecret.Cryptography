@@ -34,12 +34,27 @@ contributors — see [LICENSE](LICENSE).
 | `TopSecret.Cryptography.Blake2` | Blake2b per RFC 7693, implemented as a `System.Security.Cryptography.HMAC`. |
 
 Both multi-target `netstandard2.0;net462;net6.0;net8.0;net10.0`. Despite the
-shared repo, they're independent at build and package level: `Argon2` vendors
-its own private, internal copy of Blake2b-512 HMAC hashing (it only ever
-computes RFC 7693 Blake2b — the underlying digest, not the KDF's public
-surface) rather than referencing the `Blake2` package, so installing
-`TopSecret.Cryptography.Argon2` alone doesn't pull in `TopSecret.Cryptography.Blake2`
-as a transitive dependency.
+shared repo, they're independent at build and package level: `Argon2` no
+longer references the `Blake2` package or depends on it transitively — it
+compiles its own private, `internal`-only copy of Blake2b-512 HMAC hashing
+(it only ever computes RFC 7693 Blake2b, the underlying digest, not the
+KDF's public surface). Four of those files (the compression function and its
+constants) are MSBuild *linked* source, not copy-pasted —
+`TopSecret.Cryptography.Argon2.csproj` references the exact same `.cs` files
+`Blake2` itself compiles, so there is one copy on disk and a future fix to
+either can't silently miss the other.
+Only `HMACBlake2B.cs` is a genuinely separate file, trimmed to `internal` and
+to the one constructor Argon2 actually calls (`Blake2`'s own `HMACBlake2B` is
+`public`, with a keyed-hash overload Argon2 doesn't need).
+
+**This is a breaking change if you were relying on `Argon2` transitively
+pulling in `Blake2`.** Before this release, installing only
+`TopSecret.Cryptography.Argon2` also brought in `TopSecret.Cryptography.Blake2`
+(and its public `HMACBlake2B`) as a transitive NuGet dependency, even without
+referencing it directly. That no longer happens — if your code calls
+`HMACBlake2B` (or anything else from the `Blake2` package) without an
+explicit `PackageReference`/`<PackageReference>` to
+`TopSecret.Cryptography.Blake2`, add one.
 
 ## What differs from upstream
 
