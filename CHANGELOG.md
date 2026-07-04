@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.3](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v1.4.2...v1.4.3) (2026-07-04)
+
+
+### Bug Fixes
+
+* **ci:** unquote the nupkg glob so the shell actually expands it ([#7](https://github.com/Alpaq92/TopSecret.Cryptography/issues/7)) ([f47594a](https://github.com/Alpaq92/TopSecret.Cryptography/commit/f47594ac29eef880e798463c6d7f14dbe6a82f9c))
+
 ## [1.4.2](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v1.4.1...v1.4.2) (2026-07-04)
 
 
