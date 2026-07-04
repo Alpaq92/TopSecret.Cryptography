@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v1.4.0...v1.4.1) (2026-07-04)
+
+
+### Bug Fixes
+
+* **ci:** repair YAML syntax break in dependabot-auto-merge.yml ([b52baf7](https://github.com/Alpaq92/TopSecret.Cryptography/commit/b52baf7dd0023d5cfe9b2e1a147fba0bfdfb1baa))
+
 ## [1.4.0](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v1.3.1...v1.4.0) (2026-07-04)
 
 
