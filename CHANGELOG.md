@@ -1,32 +1,11 @@
 # Changelog
 
-## [2.1.3](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v2.1.2...v2.1.3) (2026-07-04)
+## [2.1.3](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v2.0.0...v2.1.3) (2026-07-04)
 
 
 ### Documentation
 
 * try icon in Open Color pink.6 -&gt; grape.6 ([0a5d893](https://github.com/Alpaq92/TopSecret.Cryptography/commit/0a5d893d51deb55028d93b7e220519b3bd5fcd91))
-
-## [2.1.2](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v2.1.1...v2.1.2) (2026-07-04)
-
-
-### Documentation
-
-* recolor icon to Open Color gray.4 -&gt; gray.5 ([#22](https://github.com/Alpaq92/TopSecret.Cryptography/issues/22)) ([8b316a6](https://github.com/Alpaq92/TopSecret.Cryptography/commit/8b316a68d3a1bead9df2fda0e7963eaba824934f))
-
-## [2.1.1](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v2.1.0...v2.1.1) (2026-07-04)
-
-
-### Documentation
-
-* add short NuGet-specific readmes; recolor icon to grayscale ([#20](https://github.com/Alpaq92/TopSecret.Cryptography/issues/20)) ([f5b606f](https://github.com/Alpaq92/TopSecret.Cryptography/commit/f5b606f8fbd02d32067a7aa39c18080f99ddb797))
-
-## [2.1.0](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v2.0.0...v2.1.0) (2026-07-04)
-
-
-### Features
-
-* **argon2:** wipe internal working memory after every hash ([#18](https://github.com/Alpaq92/TopSecret.Cryptography/issues/18)) ([a989a25](https://github.com/Alpaq92/TopSecret.Cryptography/commit/a989a2542249cf75c04958ee85d7deeff738c4ac))
 
 ## [2.0.0](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v1.4.5...v2.0.0) (2026-07-04)
 

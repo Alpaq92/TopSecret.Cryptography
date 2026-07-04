@@ -9,7 +9,7 @@ namespace ComparisonHarness
     public static class Program
     {
         private readonly static ThreadLocal<Stopwatch> _sw = new ThreadLocal<Stopwatch>(() => new Stopwatch());
-        private static string _pythonFilePath = "../../../../PythonHarness/main.py";
+        private static string _pythonFilePath = "../../../../TopSecret.Cryptography.PythonHarness/main.py";
         private static readonly (int low, int high) _memCostRange = (4096, 65536);
         private static readonly (int low, int high) _parallelismRange = (1, 12);
         private static readonly (int low, int high) _iterationRange = (1, 5);

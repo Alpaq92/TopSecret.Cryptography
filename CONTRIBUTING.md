@@ -33,7 +33,7 @@ node TopSecret.Cryptography.Argon2.WasmSmokeTest/bin/Release/net10.0/browser-was
 | `TopSecret.Cryptography.Argon2.WasmSmokeTest` | Not a unit test (xunit doesn't run on `browser-wasm`) — a standalone `browser-wasm` console app, run under Node's V8 in CI, that actually executes `GetBytes`/`GetBytesAsync` on a genuinely single-threaded host and checks the output against an externally-verified vector. Excluded from `TopSecret.Cryptography.sln` because it needs the `wasm-tools` workload the main build doesn't install; see its own CI job in `ci.yml`. |
 | `*.Test` | xunit suites, one per package. |
 | `TopSecret.Cryptography.ArgonBenchmarks` | BenchmarkDotNet suite (`net462`/`net8.0`/`net10.0` jobs). Published to NuGet.org (same icon/readme treatment as the two library packages) so the benchmark results behind this repo's performance claims are independently reproducible — not meant to be referenced as a dependency from your own code. |
-| `TopSecret.Cryptography.ComparisonHarness` / `PythonHarness` | Cross-language parity fuzzing against a Python Argon2 implementation. Same NuGet publishing rationale as `TopSecret.Cryptography.ArgonBenchmarks` above — reproducibility, not a dependency. `PythonHarness` itself is a plain Python script, not a .NET project, so it isn't published. |
+| `TopSecret.Cryptography.ComparisonHarness` / `TopSecret.Cryptography.PythonHarness` | Cross-language parity fuzzing against a Python Argon2 implementation. Same NuGet publishing rationale as `TopSecret.Cryptography.ArgonBenchmarks` above — reproducibility, not a dependency. `TopSecret.Cryptography.PythonHarness` itself is a plain Python script, not a .NET project, so it isn't published. |
 
 ## Rules that will fail your build or review
 

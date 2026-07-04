@@ -59,7 +59,7 @@ namespace TopSecret.Cryptography
         /// Cross-checked against argon2-cffi (Python), which wraps the
         /// official phc-winner-argon2 C reference implementation — an
         /// independent implementation, not this fork's own prior output.
-        /// Verified via PythonHarness/main.py's PasswordHasher.verify()
+        /// Verified via TopSecret.Cryptography.PythonHarness/main.py's PasswordHasher.verify()
         /// against each PHC-formatted hash this method asserts on.
         ///
         /// DegreeOfParallelism = 1 specifically: the case this fork's WASM
