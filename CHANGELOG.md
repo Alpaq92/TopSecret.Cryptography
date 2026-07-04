@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.2](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v1.4.1...v1.4.2) (2026-07-04)
+
+
+### Bug Fixes
+
+* **ci:** use bash for the NuGet push step on windows-latest ([276d724](https://github.com/Alpaq92/TopSecret.Cryptography/commit/276d72418121afdfbe234b5357be0c77dc152a7c))
+
 ## [1.4.1](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v1.4.0...v1.4.1) (2026-07-04)
 
 
