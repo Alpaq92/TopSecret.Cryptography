@@ -52,6 +52,26 @@ jobs:
           manifest-file: .release-please-manifest.json
           token: ${{ secrets.RELEASE_PLEASE_PAT || secrets.GITHUB_TOKEN }}
 
+      # Same reasoning and mechanism as dependabot-auto-merge.yml's approval
+      # step: the ruleset's required 1-approval gate applies regardless of
+      # author, so without this the release PR sits at
+      # mergeStateStatus=BLOCKED forever even with green CI. This is a
+      # deliberate, confirmed choice: release-please PRs are auto-generated
+      # version-bump/changelog content, but merging one triggers a live
+      # NuGet.org publish in the `publish` job below — there is no human or
+      # CodeRabbit review of that content before it ships. If that's ever
+      # not acceptable, remove this step and require a real approval
+      # instead (the PR will then need a manual click, same as any PR).
+      - name: Approve release PR
+        if: steps.rp.outputs.pr
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_JSON: ${{ steps.rp.outputs.pr }}
+        run: |
+          PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
+          gh pr review --approve "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" -b "Automatically approved: release-please version bump/changelog, gated on CI passing."
+
       - name: Enable auto-merge on release PR
         if: steps.rp.outputs.pr
         shell: bash
