@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.4](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v1.4.3...v1.4.4) (2026-07-04)
+
+
+### Documentation
+
+* add badges, trim intro, and align WASM motivation framing ([#8](https://github.com/Alpaq92/TopSecret.Cryptography/issues/8)) ([b65720d](https://github.com/Alpaq92/TopSecret.Cryptography/commit/b65720d10e1016ab3fe9975011b918b954f8b749))
+
 ## [1.4.3](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v1.4.2...v1.4.3) (2026-07-04)
 
 
