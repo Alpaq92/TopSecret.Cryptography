@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.5](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v1.4.4...v1.4.5) (2026-07-04)
+
+
+### Bug Fixes
+
+* **ci:** mark dev-tool projects non-packable; add one-off unlist workflow ([#11](https://github.com/Alpaq92/TopSecret.Cryptography/issues/11)) ([5e9ee06](https://github.com/Alpaq92/TopSecret.Cryptography/commit/5e9ee067d4b6b42167233cf219e504a1820485ea))
+
+
+### Documentation
+
+* rewrite NuGet package descriptions ([#12](https://github.com/Alpaq92/TopSecret.Cryptography/issues/12)) ([0385227](https://github.com/Alpaq92/TopSecret.Cryptography/commit/0385227f21e4ecaef98bdefda5208e27a246478d))
+
 ## [1.4.4](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v1.4.3...v1.4.4) (2026-07-04)
 
 
