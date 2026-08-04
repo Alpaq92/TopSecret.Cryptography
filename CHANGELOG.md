@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.2.0](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v2.1.6...v2.2.0) (2026-08-04)
+
+
+### Features
+
+* Bump the nuget-minor-and-patch group with 1 update ([#37](https://github.com/Alpaq92/TopSecret.Cryptography/issues/37)) ([b11edce](https://github.com/Alpaq92/TopSecret.Cryptography/commit/b11edcedf1298ee39b9e295e5d41ed368e08f6f4))
+
+
+### Bug Fixes
+
+* **deps:** bump actions/checkout from 7.0.0 to 7.0.1 ([#36](https://github.com/Alpaq92/TopSecret.Cryptography/issues/36)) ([e7597a4](https://github.com/Alpaq92/TopSecret.Cryptography/commit/e7597a4ee0c52bb9a557ee54c8e546f296e33ee3))
+* **deps:** bump actions/setup-dotnet from 5.4.0 to 6.0.0 ([#34](https://github.com/Alpaq92/TopSecret.Cryptography/issues/34)) ([667d753](https://github.com/Alpaq92/TopSecret.Cryptography/commit/667d7538d7aae35c4b56a5c55f9789f42879fcd7))
+* **deps:** bump actions/setup-node from 4.4.0 to 7.0.0 ([#35](https://github.com/Alpaq92/TopSecret.Cryptography/issues/35)) ([2db86f0](https://github.com/Alpaq92/TopSecret.Cryptography/commit/2db86f03f2716fd8678da9c8644d84cd47bd1d7f))
+
 ## [2.1.6](https://github.com/Alpaq92/TopSecret.Cryptography/compare/v2.1.5...v2.1.6) (2026-07-04)
 
 
